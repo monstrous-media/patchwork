@@ -1,0 +1,44 @@
+{
+  "format": "korg-m1-program/1",
+  "name": "Glass Pad",
+  "oscillatorMode": "double",
+  "assign": "poly",
+  "hold": false,
+  "osc1": { "multisound": "DWGS Voice", "octave": "8'" },
+  "osc2": { "multisound": "Strings", "octave": "8'", "interval": 0, "detune": 6, "delayStart": 0 },
+  "pitchMG": { "waveform": "triangle", "frequency": 38, "delay": 30, "intensity": 4, "osc1": true, "osc2": true, "keySync": false },
+  "vdfMG": { "waveform": "triangle", "frequency": 18, "delay": 0, "intensity": 12, "osc1": true, "osc2": true, "keySync": false },
+  "aftertouch": { "pitch": 0, "pitchMG": 20, "vdfCutoff": 25, "vdfMG": 0, "vdaAmplitude": 10 },
+  "joystick": { "pitchBend": 2, "vdfSweep": 40, "pitchMGIntensity": 30, "pitchMGFrequency": 1, "vdfMGIntensity": 0, "vdfMGFrequency": 0 },
+  "effects": {
+    "effect1": { "type": "Stereo Chorus I", "balanceL": 45, "balanceR": 45, "leftOn": true, "rightOn": true },
+    "effect2": { "type": "Concert Hall", "balanceL": 40, "balanceR": 40, "leftOn": true, "rightOn": true },
+    "serial": true
+  },
+  "voice1": {
+    "pitchEG": { "startLevel": 0, "attackTime": 0, "attackLevel": 0, "decayTime": 0, "releaseTime": 0, "releaseLevel": 0, "timeVelocitySens": 0, "levelVelocitySens": 0 },
+    "vdf": {
+      "cutoff": 48, "kbdTrackCenter": "C4", "cutoffKbdTrack": 30, "egIntensity": 45,
+      "egTimeKbdTrack": 0, "egTimeVelocitySens": 0, "egIntensityVelocitySens": 25,
+      "eg": { "attackTime": 55, "attackLevel": 70, "decayTime": 60, "breakPoint": 40, "slopeTime": 50, "sustainLevel": 30, "releaseTime": 45, "releaseLevel": -20 }
+    },
+    "vda": {
+      "level": 90, "kbdTrackCenter": "C4", "kbdTrackIntensity": 0, "velocitySens": 25,
+      "egTimeKbdTrack": 0, "egTimeVelocitySens": 0,
+      "eg": { "attackTime": 42, "attackLevel": 99, "decayTime": 50, "breakPoint": 85, "slopeTime": 60, "sustainLevel": 75, "releaseTime": 48 }
+    }
+  },
+  "voice2": {
+    "pitchEG": { "startLevel": 0, "attackTime": 0, "attackLevel": 0, "decayTime": 0, "releaseTime": 0, "releaseLevel": 0, "timeVelocitySens": 0, "levelVelocitySens": 0 },
+    "vdf": {
+      "cutoff": 40, "kbdTrackCenter": "C4", "cutoffKbdTrack": 30, "egIntensity": 35,
+      "egTimeKbdTrack": 0, "egTimeVelocitySens": 0, "egIntensityVelocitySens": 20,
+      "eg": { "attackTime": 70, "attackLevel": 60, "decayTime": 60, "breakPoint": 30, "slopeTime": 60, "sustainLevel": 20, "releaseTime": 50, "releaseLevel": -10 }
+    },
+    "vda": {
+      "level": 80, "kbdTrackCenter": "C4", "kbdTrackIntensity": 0, "velocitySens": 20,
+      "egTimeKbdTrack": 0, "egTimeVelocitySens": 0,
+      "eg": { "attackTime": 60, "attackLevel": 99, "decayTime": 50, "breakPoint": 90, "slopeTime": 60, "sustainLevel": 80, "releaseTime": 55 }
+    }
+  }
+}

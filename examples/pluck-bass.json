@@ -1,0 +1,45 @@
+{
+  "format": "korg-m1-program/1",
+  "name": "Pluck Bass",
+  "oscillatorMode": "double",
+  "assign": "mono",
+  "hold": false,
+  "osc1": { "multisound": "SynthBass1", "octave": "16'" },
+  "osc2": { "multisound": "SawWave", "octave": "16'", "interval": 0, "detune": -4, "delayStart": 0 },
+  "pitchMG": { "waveform": "triangle", "frequency": 40, "delay": 0, "intensity": 0, "osc1": true, "osc2": true, "keySync": false },
+  "vdfMG": { "waveform": "triangle", "frequency": 40, "delay": 0, "intensity": 0, "osc1": true, "osc2": true, "keySync": false },
+  "aftertouch": { "pitch": 0, "pitchMG": 0, "vdfCutoff": 40, "vdfMG": 0, "vdaAmplitude": 0 },
+  "joystick": { "pitchBend": 2, "vdfSweep": 60, "pitchMGIntensity": 0, "pitchMGFrequency": 0, "vdfMGIntensity": 0, "vdfMGFrequency": 0 },
+  "effects": {
+    "effect1": { "type": "Overdrive", "balanceL": 20, "balanceR": 20, "leftOn": true, "rightOn": true },
+    "effect2": { "type": "Room", "balanceL": 12, "balanceR": 12, "leftOn": true, "rightOn": true },
+    "serial": true
+  },
+  "voice1": {
+    "pitchEG": { "startLevel": 0, "attackTime": 0, "attackLevel": 0, "decayTime": 0, "releaseTime": 0, "releaseLevel": 0, "timeVelocitySens": 0, "levelVelocitySens": 0 },
+    "vdf": {
+      "cutoff": 28, "kbdTrackCenter": "C2", "cutoffKbdTrack": 40, "egIntensity": 70,
+      "egTimeKbdTrack": 0, "egTimeVelocitySens": 20, "egIntensityVelocitySens": 50,
+      "eg": { "attackTime": 0, "attackLevel": 99, "decayTime": 28, "breakPoint": 20, "slopeTime": 30, "sustainLevel": 0, "releaseTime": 15, "releaseLevel": 0 },
+      "egTimeVelocitySwitches": { "decay": true }
+    },
+    "vda": {
+      "level": 99, "kbdTrackCenter": "C2", "kbdTrackIntensity": -10, "velocitySens": 45,
+      "egTimeKbdTrack": 0, "egTimeVelocitySens": 0,
+      "eg": { "attackTime": 0, "attackLevel": 99, "decayTime": 35, "breakPoint": 60, "slopeTime": 50, "sustainLevel": 45, "releaseTime": 12 }
+    }
+  },
+  "voice2": {
+    "pitchEG": { "startLevel": 12, "attackTime": 0, "attackLevel": 0, "decayTime": 8, "releaseTime": 0, "releaseLevel": 0, "timeVelocitySens": 0, "levelVelocitySens": 0 },
+    "vdf": {
+      "cutoff": 22, "kbdTrackCenter": "C2", "cutoffKbdTrack": 40, "egIntensity": 80,
+      "egTimeKbdTrack": 0, "egTimeVelocitySens": 20, "egIntensityVelocitySens": 60,
+      "eg": { "attackTime": 0, "attackLevel": 99, "decayTime": 22, "breakPoint": 10, "slopeTime": 25, "sustainLevel": -20, "releaseTime": 12, "releaseLevel": 0 }
+    },
+    "vda": {
+      "level": 70, "kbdTrackCenter": "C2", "kbdTrackIntensity": -10, "velocitySens": 50,
+      "egTimeKbdTrack": 0, "egTimeVelocitySens": 0,
+      "eg": { "attackTime": 0, "attackLevel": 99, "decayTime": 25, "breakPoint": 40, "slopeTime": 40, "sustainLevel": 30, "releaseTime": 10 }
+    }
+  }
+}

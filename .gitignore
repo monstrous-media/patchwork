@@ -1,0 +1,14 @@
+.build/
+.swiftpm/
+*.xcodeproj
+xcuserdata/
+DerivedData/
+.DS_Store
+dist/
+*.syx
+!Tests/**/*.syx
+__pycache__/
+# Dumps from your own instrument stay local (they're the manufacturer's copyright)
+bank/
+current.json
+global-backup*.syx

@@ -1,0 +1,29 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: swift test 2>&1 | tail -20
+      - name: Build release products
+        run: swift build -c release
+      - name: Assemble app (unsigned)
+        run: tools/make-app.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Patchwork-unsigned
+          path: dist/Patchwork-*.zip
+
+  linux:
+    runs-on: ubuntu-latest
+    container: swift:5.10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Core tests (no Apple frameworks)
+        run: swift test --filter PatchworkCoreTests 2>&1 | tail -20

@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amiable.dev/schemas/korg-m1-program-1.json",
+  "title": "Korg M1 program (korg-m1-program/1)",
+  "description": "A single Korg M1 program in human-readable form. Converts losslessly to the 143-byte Program Parameter Dump (SysEx function 0x40). All numeric ranges are exactly what the M1's panel shows.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "name", "oscillatorMode", "assign", "hold", "osc1", "osc2", "pitchMG", "vdfMG", "aftertouch", "joystick", "effects", "voice1", "voice2"],
+  "properties": {
+    "format": { "const": "korg-m1-program/1" },
+    "name": { "type": "string", "maxLength": 10, "description": "Up to 10 printable ASCII characters, as shown on the M1 display." },
+    "oscillatorMode": { "enum": ["single", "double", "drums"], "description": "single = OSC1 only (16 voices); double = OSC1+OSC2 layered (8 voices); drums = drum kit." },
+    "assign": { "enum": ["poly", "mono"] },
+    "hold": { "type": "boolean", "description": "Notes sustain after key-up (useful for drums/one-shots)." },
+    "osc1": { "$ref": "#/$defs/oscillator" },
+    "osc2": {
+      "allOf": [{ "$ref": "#/$defs/oscillator" }],
+      "properties": {
+        "multisound": {}, "octave": {},
+        "interval": { "$ref": "#/$defs/pm12", "description": "OSC2 transpose in semitones, -12…+12." },
+        "detune": { "type": "integer", "minimum": -50, "maximum": 50, "description": "OSC2 fine tune in cents. A few cents of detune on a double program gives chorusing." },
+        "delayStart": { "$ref": "#/$defs/u99", "description": "Delay before OSC2 starts, 0 = none." }
+      },
+      "required": ["multisound", "octave", "interval", "detune", "delayStart"]
+    },
+    "pitchMG": { "$ref": "#/$defs/mg", "description": "Vibrato LFO." },
+    "vdfMG": { "$ref": "#/$defs/mg", "description": "Filter-cutoff LFO (wah / sweep)." },
+    "aftertouch": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pitch", "pitchMG", "vdfCutoff", "vdfMG", "vdaAmplitude"],
+      "properties": {
+        "pitch": { "$ref": "#/$defs/pm12" },
+        "pitchMG": { "$ref": "#/$defs/u99", "description": "Aftertouch adds vibrato depth." },
+        "vdfCutoff": { "$ref": "#/$defs/pm99" },
+        "vdfMG": { "$ref": "#/$defs/u99" },
+        "vdaAmplitude": { "$ref": "#/$defs/pm99" }
+      }
+    },
+    "joystick": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pitchBend", "vdfSweep", "pitchMGIntensity", "pitchMGFrequency", "vdfMGIntensity", "vdfMGFrequency"],
+      "properties": {
+        "pitchBend": { "$ref": "#/$defs/pm12", "description": "Bend range (X axis) in semitones; 2 is the usual default." },
+        "vdfSweep": { "$ref": "#/$defs/pm99", "description": "Filter sweep on X axis." },
+        "pitchMGIntensity": { "$ref": "#/$defs/u99", "description": "Vibrato depth added by pushing +Y." },
+        "pitchMGFrequency": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "vdfMGIntensity": { "$ref": "#/$defs/u99", "description": "Filter LFO depth added by pulling -Y." },
+        "vdfMGFrequency": { "type": "integer", "minimum": 0, "maximum": 3 }
+      }
+    },
+    "effects": {
+      "type": "object", "additionalProperties": false,
+      "required": ["effect1", "effect2", "serial"],
+      "properties": {
+        "effect1": { "$ref": "#/$defs/effect" },
+        "effect2": { "$ref": "#/$defs/effect" },
+        "serial": { "type": "boolean", "description": "true = effect1 feeds effect2 in series; false = parallel." },
+        "output3Pan": { "$ref": "#/$defs/pan" },
+        "output4Pan": { "$ref": "#/$defs/pan" }
+      }
+    },
+    "voice1": { "$ref": "#/$defs/voice", "description": "OSC1's pitch EG, filter (VDF) and amplifier (VDA)." },
+    "voice2": { "$ref": "#/$defs/voice", "description": "OSC2's pitch EG, filter and amplifier. Ignored by the M1 in single mode but must be present." }
+  },
+  "$defs": {
+    "u99": { "type": "integer", "minimum": 0, "maximum": 99 },
+    "pm99": { "type": "integer", "minimum": -99, "maximum": 99 },
+    "pm12": { "type": "integer", "minimum": -12, "maximum": 12 },
+    "note": { "type": "string", "pattern": "^[A-Ga-g][#b]?-?[0-9]$", "description": "Note name, Korg convention: C4 = middle C. Range C-1…G9." },
+    "pan": {
+      "type": ["integer", "null"], "minimum": 0, "maximum": 100,
+      "description": "Pan of the signal sent to this individual output: null = off, 0 = fully right, 50 = centre, 100 = fully left. Omit unless you use outputs 3/4."
+    },
+    "oscillator": {
+      "type": "object",
+      "required": ["multisound", "octave"],
+      "properties": {
+        "multisound": {
+          "type": "string",
+          "description": "One of the 100 internal multisound names (see SKILL.md list), or \"card:N\" for a PCM card sound, or a number 0–99."
+        },
+        "octave": { "enum": ["16'", "8'", "4'"], "description": "16' = one octave down, 8' = normal, 4' = one octave up." }
+      }
+    },
+    "mg": {
+      "type": "object", "additionalProperties": false,
+      "required": ["waveform", "frequency", "delay", "intensity", "osc1", "osc2", "keySync"],
+      "properties": {
+        "waveform": { "enum": ["triangle", "saw up", "saw down", "square"] },
+        "frequency": { "$ref": "#/$defs/u99", "description": "LFO speed. ~40 is a natural vibrato rate; 99 is very fast." },
+        "delay": { "$ref": "#/$defs/u99", "description": "Fade-in delay before the LFO takes effect." },
+        "intensity": { "$ref": "#/$defs/u99", "description": "Depth. 0 = off. Vibrato: 3–10 is subtle." },
+        "osc1": { "type": "boolean", "description": "Apply to OSC1." },
+        "osc2": { "type": "boolean", "description": "Apply to OSC2." },
+        "keySync": { "type": "boolean", "description": "Restart the LFO on each key press." }
+      }
+    },
+    "effect": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "balanceL", "balanceR", "leftOn", "rightOn"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Effect name, 1-based number 1–33, or \"thru\". Names: Hall, Ensemble Hall, Concert Hall, Room, Large Room, Live Stage, Early Reflection I/II/III, Stereo Delay, Cross Delay, Stereo Chorus I/II, Stereo Flanger, Cross Flanger, Phaser I/II, Stereo Tremolo I/II, Equalizer, Overdrive, Distortion, Exciter, Symphonic Ensemble, Rotary Speaker, Delay/Hall, Delay/Room, Delay/Early Reflection, Delay/Delay, Delay/Chorus, Delay/Flanger, Delay/Phaser, Delay/Tremolo."
+        },
+        "balanceL": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Dry/wet balance, left channel. 0 = dry, 100 = fully wet. 30–50 is typical for reverb." },
+        "balanceR": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "leftOn": { "type": "boolean" },
+        "rightOn": { "type": "boolean" },
+        "params": {
+          "type": "array", "minItems": 8, "maxItems": 8,
+          "items": { "type": "integer", "minimum": 0, "maximum": 255 },
+          "description": "The 8 raw effect parameter bytes. Their meaning depends on the effect type and their exact encoding is undocumented, so omit this unless copying from a dump — the M1 keeps sensible values from the init program."
+        }
+      }
+    },
+    "pitchEG": {
+      "type": "object", "additionalProperties": false,
+      "required": ["startLevel", "attackTime", "attackLevel", "decayTime", "releaseTime", "releaseLevel", "timeVelocitySens", "levelVelocitySens"],
+      "properties": {
+        "startLevel": { "$ref": "#/$defs/pm99", "description": "Pitch offset at note-on; 0 = in tune. Negative = starts flat and rises." },
+        "attackTime": { "$ref": "#/$defs/u99" },
+        "attackLevel": { "$ref": "#/$defs/pm99" },
+        "decayTime": { "$ref": "#/$defs/u99", "description": "Time to return to 0 (in tune)." },
+        "releaseTime": { "$ref": "#/$defs/u99" },
+        "releaseLevel": { "$ref": "#/$defs/pm99" },
+        "timeVelocitySens": { "$ref": "#/$defs/pm99" },
+        "levelVelocitySens": { "$ref": "#/$defs/pm99" }
+      }
+    },
+    "timeSwitches": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "attack": { "type": "boolean" }, "decay": { "type": "boolean" }, "slope": { "type": "boolean" }, "release": { "type": "boolean" },
+        "negative": { "type": "boolean", "description": "Polarity: false = + (higher keys / harder velocity shorten the segment), true = −." }
+      },
+      "description": "Which EG time segments the kbd-track / velocity amount applies to. Optional; omit for none."
+    },
+    "vdfEG": {
+      "type": "object", "additionalProperties": false,
+      "required": ["attackTime", "attackLevel", "decayTime", "breakPoint", "slopeTime", "sustainLevel", "releaseTime", "releaseLevel"],
+      "properties": {
+        "attackTime": { "$ref": "#/$defs/u99" },
+        "attackLevel": { "$ref": "#/$defs/pm99", "description": "Filter EG levels are bipolar: +99 opens the filter fully above cutoff, −99 closes it." },
+        "decayTime": { "$ref": "#/$defs/u99" },
+        "breakPoint": { "$ref": "#/$defs/pm99" },
+        "slopeTime": { "$ref": "#/$defs/u99" },
+        "sustainLevel": { "$ref": "#/$defs/pm99" },
+        "releaseTime": { "$ref": "#/$defs/u99" },
+        "releaseLevel": { "$ref": "#/$defs/pm99" }
+      }
+    },
+    "vdaEG": {
+      "type": "object", "additionalProperties": false,
+      "required": ["attackTime", "attackLevel", "decayTime", "breakPoint", "slopeTime", "sustainLevel", "releaseTime"],
+      "properties": {
+        "attackTime": { "$ref": "#/$defs/u99", "description": "0 = instant, ~30 = soft pad swell, 99 = very slow." },
+        "attackLevel": { "$ref": "#/$defs/u99", "description": "Usually 99." },
+        "decayTime": { "$ref": "#/$defs/u99" },
+        "breakPoint": { "$ref": "#/$defs/u99" },
+        "slopeTime": { "$ref": "#/$defs/u99" },
+        "sustainLevel": { "$ref": "#/$defs/u99", "description": "0 for plucks/percussive sounds, 99 for organs/pads." },
+        "releaseTime": { "$ref": "#/$defs/u99", "description": "~10 is a short release, ~40 pad-like, 99 very long." }
+      }
+    },
+    "vdf": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cutoff", "kbdTrackCenter", "cutoffKbdTrack", "egIntensity", "egTimeKbdTrack", "egTimeVelocitySens", "egIntensityVelocitySens", "eg"],
+      "properties": {
+        "cutoff": { "$ref": "#/$defs/u99", "description": "Low-pass cutoff. 99 = fully open (bypasses the filter character); 30–60 is where the M1 gets warm/dark." },
+        "kbdTrackCenter": { "$ref": "#/$defs/note" },
+        "cutoffKbdTrack": { "$ref": "#/$defs/pm99", "description": "How cutoff follows the keyboard above/below the centre note." },
+        "egIntensity": { "$ref": "#/$defs/u99", "description": "How much the filter EG moves the cutoff." },
+        "egTimeKbdTrack": { "$ref": "#/$defs/u99" },
+        "egTimeVelocitySens": { "$ref": "#/$defs/u99" },
+        "egIntensityVelocitySens": { "$ref": "#/$defs/pm99", "description": "Positive = harder playing opens the filter more (classic velocity-brightness)." },
+        "eg": { "$ref": "#/$defs/vdfEG" },
+        "egTimeKbdTrackSwitches": { "$ref": "#/$defs/timeSwitches" },
+        "egTimeVelocitySwitches": { "$ref": "#/$defs/timeSwitches" }
+      }
+    },
+    "vda": {
+      "type": "object", "additionalProperties": false,
+      "required": ["level", "kbdTrackCenter", "kbdTrackIntensity", "velocitySens", "egTimeKbdTrack", "egTimeVelocitySens", "eg"],
+      "properties": {
+        "level": { "$ref": "#/$defs/u99", "description": "Oscillator volume; 99 normal." },
+        "kbdTrackCenter": { "$ref": "#/$defs/note" },
+        "kbdTrackIntensity": { "$ref": "#/$defs/pm99" },
+        "velocitySens": { "$ref": "#/$defs/pm99", "description": "Positive = louder with harder playing. 20–50 is natural for keys." },
+        "egTimeKbdTrack": { "$ref": "#/$defs/u99" },
+        "egTimeVelocitySens": { "$ref": "#/$defs/u99" },
+        "eg": { "$ref": "#/$defs/vdaEG" },
+        "egTimeKbdTrackSwitches": { "$ref": "#/$defs/timeSwitches" },
+        "egTimeVelocitySwitches": { "$ref": "#/$defs/timeSwitches" }
+      }
+    },
+    "voice": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pitchEG", "vdf", "vda"],
+      "properties": {
+        "pitchEG": { "$ref": "#/$defs/pitchEG" },
+        "vdf": { "$ref": "#/$defs/vdf" },
+        "vda": { "$ref": "#/$defs/vda" }
+      }
+    }
+  }
+}
