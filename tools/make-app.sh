@@ -8,8 +8,13 @@
 # Output: dist/Patchwork.app and dist/patchwork (CLI), plus dist/Patchwork-<version>.zip
 set -eu
 cd "$(dirname "$0")/.."
-VERSION="${VERSION:-$(git describe --tags --always 2>/dev/null | sed 's/^v//' || echo 0.1.0)}"
-BUNDLE_ID="${BUNDLE_ID:-dev.amiable.patchwork}"
+# Version: VERSION env → latest tag (v1.2.3 → 1.2.3) → 0.0.0-<commit> → 0.0.0
+if [ -z "${VERSION:-}" ]; then
+  if tag=$(git describe --tags --exact-match 2>/dev/null); then VERSION="${tag#v}"
+  elif hash=$(git rev-parse --short HEAD 2>/dev/null); then VERSION="0.0.0-$hash"
+  else VERSION="0.0.0"; fi
+fi
+BUNDLE_ID="${BUNDLE_ID:-media.monstrous.patchwork}"
 MIN_OS="13.0"
 
 echo "building release…"
