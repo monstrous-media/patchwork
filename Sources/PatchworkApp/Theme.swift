@@ -51,10 +51,12 @@ enum Theme {
 
 extension Color {
     /// A colour that follows the window's appearance.
+    /// AppKit calls the provider every time the colour is resolved for drawing, so both variants are
+    /// parsed once here and the provider only picks between them.
     init(light: String, dark: String) {
+        let l = NSColor(hex: light), d = NSColor(hex: dark)
         self.init(nsColor: NSColor(name: nil) { appearance in
-            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            return NSColor(hex: isDark ? dark : light)
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? d : l
         })
     }
 }

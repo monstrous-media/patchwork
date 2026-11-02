@@ -22,6 +22,7 @@ struct PatchworkApp: App {
         .commands {
             GuideCommands()
             AppearanceCommands()
+            PerfCommands()
             CommandGroup(replacing: .newItem) {
                 Button("Init program") { model.load(M1Program(), announce: "Init program", thenSend: model.autoSend) }
                     .keyboardShortcut("n")

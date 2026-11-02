@@ -86,6 +86,7 @@ struct ContentView: View {
         .frame(minWidth: 880, minHeight: 600)
         .tint(Theme.accent)
         .onChange(of: appearance) { $0.apply() }
+        .onChange(of: page) { _ in PerfStats.shared.pageSwitchBegan() }
         .toolbar { toolbarItems }
         .alert("Problem", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
             Button("OK") { model.errorMessage = nil }
@@ -107,16 +108,16 @@ struct ContentView: View {
         switch page ?? Page.first {
         case .editor(let id):
             if let ep = ActiveSynth.pages.first(where: { $0.id == id }) {
-                EditorPageView(page: ep)
+                EditorPageView(page: ep).onAppear { PerfStats.shared.pageAppeared(ep.title) }
             } else {
                 Text("No such page").foregroundStyle(.secondary)
             }
         case .drumKits:
-            DrumKitsView()
+            DrumKitsView().onAppear { PerfStats.shared.pageAppeared("Drum kits") }
         case .library:
-            LibraryView()
+            LibraryView().onAppear { PerfStats.shared.pageAppeared("Library") }
         case .log:
-            LogView()
+            LogView().onAppear { PerfStats.shared.pageAppeared("Log") }
         }
     }
 
@@ -208,6 +209,7 @@ struct ContentView: View {
         HStack(spacing: 10) {
             Text(model.status).font(Theme.monoCaption).foregroundStyle(Theme.muted).lineLimit(1)
             Spacer()
+            PerfBadge()
             if model.dirty {
                 if model.autoSend { StatusChip(text: "edited · auto-sent", tone: .good) }
                 else { StatusChip(text: "edited · not sent", tone: .warn) }
@@ -242,6 +244,10 @@ struct MIDIBar: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
+        bar.measured("MIDIBar")
+    }
+
+    private var bar: some View {
         HStack(spacing: 12) {
             Picker("In", selection: $model.selectedSource) {
                 Text("—").tag(MIDIEndpointRef(0))
@@ -317,6 +323,7 @@ struct EditorPageView: View {
             .padding(16)
         }
         .background(Theme.surface)
+        .measured("EditorPage")
     }
 
     @ViewBuilder
@@ -521,6 +528,7 @@ struct LibraryView: View {
             }
         }
         .buttonStyle(.borderless)
+        .measured("SlotRow")
     }
 
     // MARK: Panels

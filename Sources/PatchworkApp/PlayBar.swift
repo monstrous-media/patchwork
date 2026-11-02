@@ -51,6 +51,7 @@ struct PlayBar: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(Theme.raised)
+        .measured("PlayBar")
         .sheet(isPresented: $showEditor) {
             PhraseEditor().environmentObject(model)
         }

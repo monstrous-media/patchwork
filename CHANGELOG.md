@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Faster drawing: theme colours resolve to pre-built NSColors (the dynamic provider was re-parsing hex
+  strings on every draw); row labels no longer run a scale-to-fit pass.
+- View → Show render stats: body evaluations per second for the busiest views and page-switch time to
+  first frame, in the status bar (`Perf.swift`, `.measured("Name")`).
+
 ## 0.2.0
 
 - Layout reflows: editor cards fill as many columns as fit (one on a narrow window, three on a wide

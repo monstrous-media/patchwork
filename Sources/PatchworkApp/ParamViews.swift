@@ -8,6 +8,10 @@ struct ParamRow: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
+        row.measured("ParamRow")
+    }
+
+    @ViewBuilder private var row: some View {
         switch def.kind {
         case .ascii:
             LabeledRow(title: def.name) {
@@ -118,7 +122,7 @@ struct RowLabel: View {
     static let width: CGFloat = 148
     var body: some View {
         Text(title).font(.system(size: 12.5)).foregroundStyle(Theme.muted)
-            .lineLimit(1).minimumScaleFactor(0.85).truncationMode(.tail)
+            .lineLimit(1).truncationMode(.tail)
             .frame(width: RowLabel.width, alignment: .leading)
     }
 }
@@ -192,6 +196,10 @@ struct SectionBox: View {
     }
 
     var body: some View {
+        card.measured("SectionBox")
+    }
+
+    private var card: some View {
         SectionCard(title: section.rawValue, caption: byteRange) {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(ActiveSynth.definitions(in: section)) { def in
