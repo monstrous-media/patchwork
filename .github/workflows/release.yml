@@ -13,6 +13,10 @@ jobs:
     runs-on: macos-14
     permissions:
       contents: write
+    env:
+      # `secrets` can't be used in a step's `if:`; expose presence as plain env values instead.
+      HAVE_CERT: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      HAVE_NOTARY: ${{ secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -20,7 +24,7 @@ jobs:
         run: swift test 2>&1 | tail -5
 
       - name: Import Developer ID certificate
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
+        if: env.HAVE_CERT == 'true'
         env:
           CERT_P12: ${{ secrets.APPLE_CERTIFICATE }}
           CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -35,7 +39,7 @@ jobs:
           echo "SIGN_IDENTITY=${{ secrets.APPLE_SIGNING_IDENTITY }}" >> "$GITHUB_ENV"
 
       - name: Store notarisation credentials
-        if: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_ID != '' }}
+        if: env.HAVE_CERT == 'true' && env.HAVE_NOTARY == 'true'
         run: |
           xcrun notarytool store-credentials ci-notary \
             --apple-id "${{ secrets.APPLE_ID }}" \
