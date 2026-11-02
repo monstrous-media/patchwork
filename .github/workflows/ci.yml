@@ -4,18 +4,21 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   macos:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Build and test
         run: swift test 2>&1 | tail -20
       - name: Build release products
         run: swift build -c release
       - name: Assemble app (unsigned)
         run: tools/make-app.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Patchwork-unsigned
           path: dist/Patchwork-*.zip
@@ -24,6 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     container: swift:5.10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Core tests (no Apple frameworks)
         run: swift test --filter PatchworkCoreTests 2>&1 | tail -20

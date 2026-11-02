@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Keep the GitHub Actions we run (checkout, upload-artifact, gh-release) current; with SHA pins
+  # in place Dependabot updates the pin and its version comment together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+  # No package dependencies yet (Package.swift has none); this keeps us told if that changes.
+  - package-ecosystem: swift
+    directory: /
+    schedule:
+      interval: monthly
