@@ -53,9 +53,17 @@ jobs:
       - name: Package CLI
         run: (cd dist && tar -czf "patchwork-cli-${GITHUB_REF_NAME#v}-macos.tar.gz" patchwork)
 
+      - name: Release notes from CHANGELOG
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" '$0 ~ "^## " v "( |$)" {p=1; next} /^## / {p=0} p' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then echo "No CHANGELOG section for $v" > notes.md; fi
+          printf '\n---\n`Patchwork-%s.zip` is signed and notarised; unzip and drag to Applications. `patchwork-cli-%s-macos.tar.gz` is the command-line tool.\n' "$v" "$v" >> notes.md
+          cat notes.md
+
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/Patchwork-*.zip
             dist/patchwork-cli-*.tar.gz
-          generate_release_notes: true
+          body_path: notes.md

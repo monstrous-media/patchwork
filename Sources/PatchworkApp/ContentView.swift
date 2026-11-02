@@ -44,38 +44,48 @@ struct ContentView: View {
     @Environment(\.undoManager) private var undoManager
     @State private var page: Page? = Page.first
     @State private var mutateAmount = 0.2
+    @AppStorage("appearance") private var appearance: Appearance = .dark
 
     var body: some View {
         NavigationSplitView {
             List(selection: $page) {
-                Section(ActiveSynth.displayName) {
+                Section {
                     ForEach(ActiveSynth.pages) { ep in
                         let p = Page.editor(ep.id)
                         Label(p.title, systemImage: p.icon).tag(p)
                     }
+                } header: { GroupHeader(text: "Editor") }
+                Section {
                     Label(Page.drumKits.title, systemImage: Page.drumKits.icon).tag(Page.drumKits)
-                }
-                Section("App") {
+                } header: { GroupHeader(text: "Instrument") }
+                Section {
                     Label(Page.library.title, systemImage: Page.library.icon).tag(Page.library)
+                } header: { GroupHeader(text: "Library") }
+                Section {
                     Label(Page.log.title, systemImage: Page.log.icon).tag(Page.log)
-                }
+                } header: { GroupHeader(text: "Diagnostics") }
             }
-            .navigationSplitViewColumnWidth(min: 150, ideal: 170)
+            .scrollContentBackground(.hidden)
+            .background(Theme.sidebar)
+            .navigationSplitViewColumnWidth(min: 160, ideal: 190)
             .safeAreaInset(edge: .bottom) { generatorPanel }
         } detail: {
             VStack(spacing: 0) {
                 MIDIBar()
-                Divider()
+                Rectangle().fill(Theme.line).frame(height: 1)
                 detail
                 if showsPlayBar {
-                    Divider()
+                    Rectangle().fill(Theme.line).frame(height: 1)
                     PlayBar()
                 }
-                Divider()
+                Rectangle().fill(Theme.line).frame(height: 1)
                 statusBar
             }
+            .background(Theme.surface)
         }
-        .frame(minWidth: 980, minHeight: 640)
+        .frame(minWidth: 880, minHeight: 600)
+        .tint(Theme.accent)
+        .onChange(of: appearance) { $0.apply() }
         .toolbar { toolbarItems }
         .alert("Problem", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
             Button("OK") { model.errorMessage = nil }
@@ -84,6 +94,7 @@ struct ContentView: View {
         }
         .onAppear {
             NSApp.activate(ignoringOtherApps: true)
+            appearance.apply()
             model.undoManager = undoManager
         }
         .onChange(of: undoManager) { um in model.undoManager = um }
@@ -113,7 +124,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             Divider()
             HStack {
-                Text("Generate").font(.caption).foregroundStyle(.secondary)
+                GroupHeader(text: "Generate")
                 Spacer()
                 HelpButton(section: "generators")
             }
@@ -148,6 +159,7 @@ struct ContentView: View {
         }
         .padding(10)
         .buttonStyle(.link)
+        .background(Theme.sidebar)
     }
 
     /// Guide section for the current page (the ? button).
@@ -173,6 +185,7 @@ struct ContentView: View {
                 .help("Request: pull the program the M1 is playing into the editor (⌘R)")
             Button { model.sendProgram() } label: { Label("Send", systemImage: "arrow.up.circle") }
                 .labelStyle(.titleAndIcon)
+                .buttonStyle(.borderedProminent)
                 .help("Send: push the editor patch to the M1's edit buffer — temporary until written (⌘S)")
             HStack(spacing: 6) {
                 Button { model.writeToSlot() } label: { Label("Write", systemImage: "internaldrive") }
@@ -192,13 +205,19 @@ struct ContentView: View {
     }
 
     var statusBar: some View {
-        HStack {
-            Text(model.status).font(.caption).lineLimit(1)
+        HStack(spacing: 10) {
+            Text(model.status).font(Theme.monoCaption).foregroundStyle(Theme.muted).lineLimit(1)
             Spacer()
-            if model.dirty { Text("edited").font(.caption).foregroundStyle(.orange) }
-            Text("“\(model.program.name)”").font(.system(.caption, design: .monospaced))
+            if model.dirty {
+                if model.autoSend { StatusChip(text: "edited · auto-sent", tone: .good) }
+                else { StatusChip(text: "edited · not sent", tone: .warn) }
+            } else {
+                StatusChip(text: "as received")
+            }
+            Text("“\(model.program.name)”").font(Theme.value).foregroundStyle(Theme.accent)
         }
-        .padding(.horizontal, 10).padding(.vertical, 4)
+        .padding(.horizontal, 10).padding(.vertical, 5)
+        .background(Theme.raised)
     }
 
     // MARK: Files
@@ -241,7 +260,7 @@ struct MIDIBar: View {
             }
             .frame(width: 80)
             .help("MIDI channel — must match the M1's Global channel (GLOBAL → 5 → Channel)")
-            Toggle("Auto-send on edit", isOn: $model.autoSend).toggleStyle(.switch)
+            Toggle("Auto-send on edit", isOn: $model.autoSend).toggleStyle(.switch).fixedSize()
                 .help("Send every edit to the M1's edit buffer as you make it (about 80 ms after the control stops moving)")
             Spacer()
             LinkIndicator()
@@ -249,6 +268,7 @@ struct MIDIBar: View {
                 .help("Rescan MIDI devices after plugging something in")
         }
         .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(Theme.surface)
     }
 }
 
@@ -259,19 +279,20 @@ struct LinkIndicator: View {
 
     private var state: (color: Color, text: String, help: String) {
         if model.selectedSource == 0 {
-            return (.gray, "No In", "No MIDI input selected — replies and acknowledgements from the M1 can't be seen")
+            return (Theme.faint, "No In", "No MIDI input selected — replies and acknowledgements from the M1 can't be seen")
         }
         if model.inputHeard {
-            return (.green, "M1 heard", "Bytes are arriving on In (the M1's active sensing or replies), so the return cable works")
+            return (Theme.accent, "M1 heard", "Bytes are arriving on In (the M1's active sensing or replies), so the return cable works")
         }
-        return (.orange, "M1 silent", "Nothing has arrived on In for 2 s. A powered, cabled M1 sends active sensing continuously — check power, the M1 MIDI OUT → interface IN cable, and the In port above")
+        return (Theme.amber, "M1 silent", "Nothing has arrived on In for 2 s. A powered, cabled M1 sends active sensing continuously — check power, the M1 MIDI OUT → interface IN cable, and the In port above")
     }
 
     var body: some View {
         let s = state
-        HStack(spacing: 5) {
+        HStack(spacing: 6) {
             Circle().fill(s.color).frame(width: 8, height: 8)
-            Text(s.text).font(.caption).foregroundStyle(.secondary)
+                .shadow(color: model.inputHeard ? s.color.opacity(0.9) : .clear, radius: 4)
+            Text(s.text).font(Theme.monoCaption).foregroundStyle(Theme.muted)
         }
         .help(s.help)
     }
@@ -283,19 +304,19 @@ struct EditorPageView: View {
     @EnvironmentObject var model: AppModel
     let page: EditorPage
 
+    /// Cards flow into as many columns as fit (one on a narrow window, two or three on a wide one),
+    /// in the definition's order, instead of fixed pairs that squeeze each other.
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(Array(page.rows.enumerated()), id: \.offset) { _, row in
-                    HStack(alignment: .top, spacing: 12) {
-                        ForEach(Array(row.enumerated()), id: \.offset) { _, block in
-                            blockView(block)
-                        }
-                    }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 400, maximum: 640), spacing: 12, alignment: .top)],
+                      alignment: .leading, spacing: 12) {
+                ForEach(Array(page.rows.flatMap { $0 }.enumerated()), id: \.offset) { _, block in
+                    blockView(block)
                 }
             }
-            .padding()
+            .padding(16)
         }
+        .background(Theme.surface)
     }
 
     @ViewBuilder
@@ -304,17 +325,7 @@ struct EditorPageView: View {
         case .section(let s):
             SectionBox(section: s)
         case .sectionWithEnvelope(let s, let e):
-            VStack(spacing: 12) {
-                SectionBox(section: s)
-                EnvelopeSketch(attack: model.program.unsigned(e.attackTime),
-                               attackLevel: e.signedLevels ? model.program.signed(e.attackLevel) : model.program.unsigned(e.attackLevel),
-                               decay: model.program.unsigned(e.decayTime),
-                               breakPoint: e.signedLevels ? model.program.signed(e.breakPoint) : model.program.unsigned(e.breakPoint),
-                               slope: model.program.unsigned(e.slopeTime),
-                               sustain: e.signedLevels ? model.program.signed(e.sustainLevel) : model.program.unsigned(e.sustainLevel),
-                               release: model.program.unsigned(e.releaseTime),
-                               signedLevels: e.signedLevels)
-            }
+            SectionBox(section: s, envelope: e)
         }
     }
 }
@@ -401,6 +412,7 @@ struct LibraryView: View {
                     Button("Verify against M1") { model.verifyBank(model.banks[i]) }
                         .help("Verify: re-read this bank's filled slots from the M1 and report any that differ")
                     Button("Restore to M1…") { confirmRestore = true }
+                        .buttonStyle(.borderedProminent)
                         .help("Restore: write every filled slot of this bank into the M1, one slot at a time, each acknowledged. Asks first. Needs Memory Protect off.")
                     Toggle("verify after", isOn: $verifyAfterRestore).toggleStyle(.checkbox)
                         .help("After a Restore, read every written slot back and compare")
@@ -464,8 +476,9 @@ struct LibraryView: View {
             Text("Clear").frame(width: 36)
         }
         .lineLimit(1).fixedSize(horizontal: false, vertical: true)
-        .font(.caption).foregroundStyle(.secondary)
-        .padding(.horizontal, 18).padding(.vertical, 4)
+        .font(Theme.groupHeader).foregroundStyle(Theme.faint)
+        .padding(.horizontal, 18).padding(.vertical, 5)
+        .background(Theme.raised)
         .help("Load → editor · Morph: editor toward this · Store: editor → this local slot · Write: this → the M1's slot · Save: to a file · Clear: empty the local slot")
     }
 
@@ -473,7 +486,7 @@ struct LibraryView: View {
     func slotRow(bankIndex i: Int, slot n: Int) -> some View {
         let p = model.banks[i].programs[n]
         HStack(spacing: 10) {
-            Text(Bank.slotLabel(n)).monospacedDigit().foregroundStyle(.secondary).frame(width: 34, alignment: .leading)
+            Text(Bank.slotLabel(n)).font(Theme.value).foregroundStyle(Theme.faint).frame(width: 34, alignment: .leading)
             if let p = p {
                 Text(p.name).frame(width: 110, alignment: .leading)
                 Text(ActiveSynth.summary(p)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -537,6 +550,18 @@ struct LogView: View {
     @EnvironmentObject var model: AppModel
     static let fmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "HH:mm:ss.SSS"; return f }()
 
+    /// Timestamps faint, outgoing neutral, acknowledgements green, incoming blue, warnings amber, refusals red.
+    static func tone(_ e: LogEntry) -> Color {
+        let t = e.text
+        if e.isError {
+            let refusal = t.localizedCaseInsensitiveContains("error") || t.localizedCaseInsensitiveContains("failed") || t.localizedCaseInsensitiveContains("protect")
+            return refusal ? Theme.red : Theme.amber
+        }
+        if t.hasPrefix("Received") || t.hasPrefix("Hearing") || t.hasPrefix("Panel edit") { return Theme.blue }
+        if t.hasPrefix("M1:") || t.contains("completed") || t.contains("verified") || t.contains("acknowledged") { return Theme.wellAccent }
+        return Theme.wellText
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -550,12 +575,15 @@ struct LogView: View {
             ScrollViewReader { proxy in
                 List(model.log) { entry in
                     HStack(alignment: .top) {
-                        Text(LogView.fmt.string(from: entry.time)).monospacedDigit().foregroundStyle(.secondary)
-                        Text(entry.text).foregroundColor(entry.isError ? Color.red : Color.primary).textSelection(.enabled)
+                        Text(LogView.fmt.string(from: entry.time)).foregroundStyle(Theme.faint)
+                        Text(entry.text).foregroundStyle(LogView.tone(entry)).textSelection(.enabled)
                     }
-                    .font(.system(.body, design: .monospaced))
+                    .font(Theme.mono)
+                    .listRowBackground(Theme.well)
                     .id(entry.id)
                 }
+                .scrollContentBackground(.hidden)
+                .background(Theme.well)
                 .onChange(of: model.log.count) { _ in
                     if let last = model.log.last { proxy.scrollTo(last.id, anchor: .bottom) }
                 }

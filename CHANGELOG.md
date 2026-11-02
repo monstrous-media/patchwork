@@ -1,7 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
+- Layout reflows: editor cards fill as many columns as fit (one on a narrow window, three on a wide
+  one), envelope sketches sit inside their EG card, bit switches wrap, labels truncate instead of
+  squeezing sliders; drum kit header split in two rows; window minimum 880 × 600.
+- New app icon (patch bay: nine sockets, one cable) and a visual theme to match the hardware: dark by
+  default with the M1's LCD green as the single signal colour, monospaced accent values, LCD-style name
+  field and envelope wells, section cards with their SysEx byte ranges, status chips, and a colour
+  language in the MIDI log (acks green, incoming blue, warnings amber, refusals red). View → Appearance
+  switches dark / light / system. `Theme.swift` holds every colour; change `Theme.accent` to retint.
 - MIDI bar heartbeat: **M1 heard** / **M1 silent**, driven by anything arriving on In (the M1's
   active sensing), so a working return path is visible at a glance.
 - Edit-buffer and Global sends now expect the M1's acknowledgement; when none arrives within 0.7 s

@@ -43,6 +43,8 @@ Audio: M1 outputs 1/L and 2/R → interface line inputs. Hear it through the int
 
 ### In the app
 
+The app is dark by default — a matte panel with one signal colour, the green of the M1's display, used for every value and for anything the M1 has confirmed; amber means the screen is ahead of the M1. **View → Appearance** switches to light or follows the system.
+
 The bar under the toolbar: **In** and **Out** ports (the interface is picked automatically), **Ch**, and **Auto-send on edit**. ↻ rescans after plugging something in.
 
 At the right, a heartbeat dot: **M1 heard** (green) means bytes are arriving on In — a powered, cabled M1 sends active sensing continuously, so this proves the return path. **M1 silent** (amber) means nothing has arrived for 2 s. A *Send* only proves the data reached the interface; if the M1 doesn't acknowledge within 0.7 s the log says so and suggests what to check (at most once every 15 s while you keep editing).

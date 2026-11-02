@@ -12,9 +12,14 @@ struct ParamRow: View {
         case .ascii:
             LabeledRow(title: def.name) {
                 TextField("Program name", text: model.nameBinding)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
+                    .font(Theme.lcd)
+                    .foregroundStyle(Theme.wellAccent)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(RoundedRectangle(cornerRadius: Theme.controlRadius).fill(Theme.well))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.controlRadius).stroke(Theme.line, lineWidth: 1))
                     .frame(maxWidth: 220)
-                Text("\(model.program.name.count)/10").foregroundStyle(.secondary).font(.caption)
+                Text("\(model.program.name.count)/10").font(Theme.monoCaption).foregroundStyle(Theme.faint)
             }
         case .unsigned(let mx):
             SliderRow(title: def.name, value: model.unsignedBinding(def.index), range: 0...mx)
@@ -29,10 +34,12 @@ struct ParamRow: View {
             }
         case .bits(let fields):
             LabeledRow(title: def.name) {
-                HStack(spacing: 14) {
+                // Wraps into as many columns as fit instead of squeezing the labels off the checkboxes.
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 10, alignment: .leading)],
+                          alignment: .leading, spacing: 4) {
                     ForEach(fields, id: \.name) { f in
                         if f.width == 1 {
-                            Toggle(f.name, isOn: model.bitBinding(def.index, bit: f.shift)).toggleStyle(.checkbox)
+                            Toggle(f.name, isOn: model.bitBinding(def.index, bit: f.shift)).toggleStyle(.checkbox).fixedSize()
                         } else {
                             Picker(f.name, selection: model.fieldBinding(def.index, shift: f.shift, width: f.width)) {
                                 ForEach(0..<f.labels.count, id: \.self) { i in Text(f.labels[i]).tag(i) }
@@ -46,7 +53,7 @@ struct ParamRow: View {
             LabeledRow(title: def.name) {
                 let b = model.unsignedBinding(def.index)
                 Stepper(value: b, in: 0...127) {
-                    Text(NoteName.string(for: b.wrappedValue)).monospacedDigit().frame(width: 40, alignment: .leading)
+                    Text(NoteName.string(for: b.wrappedValue)).font(Theme.value).foregroundStyle(Theme.accent).frame(width: 40, alignment: .leading)
                 }
                 Slider(value: doubleBinding(b), in: 0...127, step: 1).frame(maxWidth: 200)
             }
@@ -104,12 +111,24 @@ struct ParamRow: View {
     }
 }
 
+/// Row label: fixed column so sliders line up across cards; long names shrink a little, then truncate
+/// (the full name is in the row's tooltip).
+struct RowLabel: View {
+    let title: String
+    static let width: CGFloat = 148
+    var body: some View {
+        Text(title).font(.system(size: 12.5)).foregroundStyle(Theme.muted)
+            .lineLimit(1).minimumScaleFactor(0.85).truncationMode(.tail)
+            .frame(width: RowLabel.width, alignment: .leading)
+    }
+}
+
 struct LabeledRow<Content: View>: View {
     let title: String
     @ViewBuilder let content: () -> Content
     var body: some View {
         HStack {
-            Text(title).frame(width: 190, alignment: .leading).foregroundStyle(.secondary)
+            RowLabel(title: title)
             content()
             Spacer(minLength: 0)
         }
@@ -124,12 +143,13 @@ struct SliderRow: View {
 
     var body: some View {
         HStack {
-            Text(title).frame(width: 190, alignment: .leading).foregroundStyle(.secondary)
+            RowLabel(title: title)
             Slider(value: Binding(get: { Double(value) }, set: { value = Int($0.rounded()) }),
                    in: Double(range.lowerBound)...Double(range.upperBound), step: 1)
+                .frame(minWidth: 80)
             Stepper(value: $value, in: range) {
                 Text(value > 0 && range.lowerBound < 0 ? "+\(value)" : "\(value)")
-                    .monospacedDigit().frame(width: 36, alignment: .trailing)
+                    .font(Theme.value).foregroundStyle(Theme.accent).frame(width: 40, alignment: .trailing)
             }
         }
         .frame(minHeight: 24)
@@ -143,14 +163,14 @@ struct PanRow: View {
 
     var body: some View {
         HStack {
-            Text(title).frame(width: 190, alignment: .leading).foregroundStyle(.secondary)
+            RowLabel(title: title)
             Toggle("On", isOn: Binding(get: { value != 0 }, set: { value = $0 ? 51 : 0 })).toggleStyle(.checkbox)
             if value != 0 {
                 Text("R").font(.caption)
                 Slider(value: Binding(get: { Double(value - 1) }, set: { value = Int($0.rounded()) + 1 }), in: 0...100, step: 1)
                     .frame(maxWidth: 200)
                 Text("L").font(.caption)
-                Text("\(100 - (value - 1)):\(value - 1)").monospacedDigit().font(.caption).frame(width: 50)
+                Text("\(100 - (value - 1)):\(value - 1)").font(Theme.value).foregroundStyle(Theme.accent).frame(width: 50)
             }
             Spacer(minLength: 0)
         }
@@ -161,23 +181,41 @@ struct PanRow: View {
 /// A titled group of parameter rows. Rows a generator just changed glow briefly.
 struct SectionBox: View {
     let section: ParamSection
+    var envelope: EnvelopeSpec? = nil
     @EnvironmentObject var model: AppModel
 
+    /// Parameter byte range of the section, e.g. "P63–P80", so the UI and the SysEx map read alike.
+    var byteRange: String? {
+        let idx = ActiveSynth.definitions(in: section).map(\.index)
+        guard let lo = idx.min(), let hi = idx.max() else { return nil }
+        return lo == hi ? "P\(lo)" : "P\(lo)–P\(hi)"
+    }
+
     var body: some View {
-        GroupBox(section.rawValue) {
-            VStack(alignment: .leading, spacing: 6) {
+        SectionCard(title: section.rawValue, caption: byteRange) {
+            VStack(alignment: .leading, spacing: 4) {
                 ForEach(ActiveSynth.definitions(in: section)) { def in
                     ParamRow(def: def)
                         .help(ActiveSynth.help(for: def))
-                        .padding(.horizontal, 4)
+                        .padding(.horizontal, 6)
                         .background(
-                            RoundedRectangle(cornerRadius: 5)
-                                .fill(Color.accentColor.opacity(model.highlighted.contains(def.index) ? 0.22 : 0))
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Theme.accent.opacity(model.highlighted.contains(def.index) ? 0.22 : 0))
                         )
                         .animation(.easeOut(duration: 0.6), value: model.highlighted)
                 }
+                if let e = envelope {
+                    EnvelopeSketch(attack: model.program.unsigned(e.attackTime),
+                                   attackLevel: e.signedLevels ? model.program.signed(e.attackLevel) : model.program.unsigned(e.attackLevel),
+                                   decay: model.program.unsigned(e.decayTime),
+                                   breakPoint: e.signedLevels ? model.program.signed(e.breakPoint) : model.program.unsigned(e.breakPoint),
+                                   slope: model.program.unsigned(e.slopeTime),
+                                   sustain: e.signedLevels ? model.program.signed(e.sustainLevel) : model.program.unsigned(e.sustainLevel),
+                                   release: model.program.unsigned(e.releaseTime),
+                                   signedLevels: e.signedLevels)
+                        .padding(.top, 6)
+                }
             }
-            .padding(6)
         }
     }
 }
@@ -204,11 +242,12 @@ struct EnvelopeSketch: View {
                 x += w * CGFloat(20 / total); path.addLine(to: CGPoint(x: x, y: y(sustain)))
                 x += w * CGFloat(Double(release) / total); path.addLine(to: CGPoint(x: x, y: signedLevels ? h / 2 : h))
             }
-            .stroke(Color.accentColor, lineWidth: 1.5)
+            .stroke(Theme.wellAccent, lineWidth: 2)
         }
-        .frame(height: 48)
-        .background(Color.secondary.opacity(0.08))
-        .cornerRadius(4)
+        .frame(height: 56)
+        .padding(.horizontal, 8).padding(.vertical, 6)
+        .background(RoundedRectangle(cornerRadius: Theme.controlRadius).fill(Theme.well))
+        .overlay(RoundedRectangle(cornerRadius: Theme.controlRadius).stroke(Theme.line, lineWidth: 1))
     }
 }
 #endif

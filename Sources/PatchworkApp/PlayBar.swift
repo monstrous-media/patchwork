@@ -15,6 +15,7 @@ struct PlayBar: View {
                     Label(model.isPlaying ? "Stop" : "Play", systemImage: model.isPlaying ? "stop.fill" : "play.fill")
                         .frame(width: 60)
                 }
+                .buttonStyle(.borderedProminent)
                 .help("Play or stop the selected phrase on the M1 (⌘↩)")
 
                 Picker("Phrase", selection: $model.selectedPhraseID) {
@@ -22,24 +23,24 @@ struct PlayBar: View {
                         Text(p.loop ? "\(p.name) ↻" : p.name).tag(Optional(p.id))
                     }
                 }
-                .frame(maxWidth: 230)
+                .frame(minWidth: 120, maxWidth: 230)
                 .help("Test phrase to audition with; ↻ marks phrases that loop until stopped")
 
                 Button("Edit…") { showEditor = true }
                     .help("Edit phrases: notes per step, velocity, gate, gap, loop")
 
                 Stepper(value: $model.transpose, in: -24...24) {
-                    Text("Transpose \(model.transpose >= 0 ? "+" : "")\(model.transpose)").monospacedDigit().frame(width: 100, alignment: .leading)
+                    Text("Transpose \(model.transpose >= 0 ? "+" : "")\(model.transpose)").monospacedDigit().lineLimit(1).fixedSize()
                 }
                 .help("Shift the phrase and keyboard in semitones (−12 for bass sounds)")
 
-                Toggle("Retrigger on change", isOn: $model.retriggerOnEdit)
+                Toggle("Retrigger on change", isOn: $model.retriggerOnEdit).fixedSize()
                     .help("Play the phrase again after every change: edits, Randomise, Mutate, Morph, Init, loading or requesting a program")
 
                 Spacer()
 
                 Stepper(value: $model.keyboardOctave, in: 0...7) {
-                    Text("Keys from C\(model.keyboardOctave)").frame(width: 90, alignment: .leading)
+                    Text("Keys from C\(model.keyboardOctave)").lineLimit(1).fixedSize()
                 }
                 .help("Lowest octave of the on-screen keyboard")
                 HelpButton(section: "auditioning-the-play-bar")
@@ -49,6 +50,7 @@ struct PlayBar: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
+        .background(Theme.raised)
         .sheet(isPresented: $showEditor) {
             PhraseEditor().environmentObject(model)
         }
@@ -98,11 +100,11 @@ struct KeyView: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: 3)
-            .fill(pressed ? Color.accentColor : (isBlack ? Color(white: 0.15) : Color(white: 0.97)))
-            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.gray.opacity(0.7), lineWidth: 1))
+            .fill(pressed ? Theme.accent : (isBlack ? Theme.keyBlack : Theme.keyWhite))
+            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Theme.keyLine, lineWidth: 1))
             .overlay(alignment: .bottom) {
                 if !isBlack && note % 12 == 0 {
-                    Text(NoteName.string(for: note)).font(.caption2).foregroundColor(.gray).padding(.bottom, 2)
+                    Text(NoteName.string(for: note)).font(Theme.groupHeader).foregroundStyle(Theme.faint).padding(.bottom, 2)
                 }
             }
             .gesture(

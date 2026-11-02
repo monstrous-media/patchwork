@@ -21,6 +21,7 @@ struct PatchworkApp: App {
         }
         .commands {
             GuideCommands()
+            AppearanceCommands()
             CommandGroup(replacing: .newItem) {
                 Button("Init program") { model.load(M1Program(), announce: "Init program", thenSend: model.autoSend) }
                     .keyboardShortcut("n")
@@ -46,6 +47,7 @@ struct PatchworkApp: App {
         Window("Patchwork Guide", id: "help") {
             HelpView()
                 .environmentObject(help)
+                .tint(Theme.accent)
         }
         .defaultSize(width: 900, height: 640)
     }
@@ -53,6 +55,18 @@ struct PatchworkApp: App {
 #endif
 
 #if os(macOS)
+/// View ▸ Appearance: dark (default), light, or follow the system.
+struct AppearanceCommands: Commands {
+    @AppStorage("appearance") private var appearance: Appearance = .dark
+    var body: some Commands {
+        CommandGroup(after: .toolbar) {
+            Picker("Appearance", selection: $appearance) {
+                ForEach(Appearance.allCases) { a in Text(a.title).tag(a) }
+            }
+        }
+    }
+}
+
 /// Help menu → the bundled guide.
 struct GuideCommands: Commands {
     @Environment(\.openWindow) private var openWindow
