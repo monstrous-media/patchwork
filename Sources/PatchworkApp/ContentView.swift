@@ -108,7 +108,9 @@ struct ContentView: View {
         switch page ?? Page.first {
         case .editor(let id):
             if let ep = ActiveSynth.pages.first(where: { $0.id == id }) {
-                EditorPageView(page: ep).onAppear { PerfStats.shared.pageAppeared(ep.title) }
+                // Distinct identity per page: without it SwiftUI updates one EditorPageView in place and
+                // onAppear (which times the switch) never fires again.
+                EditorPageView(page: ep).id(ep.id).onAppear { PerfStats.shared.pageAppeared(ep.title) }
             } else {
                 Text("No such page").foregroundStyle(.secondary)
             }

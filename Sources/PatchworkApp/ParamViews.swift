@@ -59,7 +59,7 @@ struct ParamRow: View {
                 Stepper(value: b, in: 0...127) {
                     Text(NoteName.string(for: b.wrappedValue)).font(Theme.value).foregroundStyle(Theme.accent).frame(width: 40, alignment: .leading)
                 }
-                Slider(value: doubleBinding(b), in: 0...127, step: 1).frame(maxWidth: 200)
+                Slider(value: doubleBinding(b), in: 0...127).frame(maxWidth: 200)
             }
         case .multisound:
             let drums = model.program.unsigned(P.oscMode) == 2 && def.index == P.osc1Multisound
@@ -140,6 +140,9 @@ struct LabeledRow<Content: View>: View {
     }
 }
 
+// Sliders deliberately have no `step:`: a stepped SwiftUI Slider becomes an NSSlider with one tick mark
+// per step, and AppKit recomputes every tick's rect several times per layout — with ~100 sliders of
+// 100–256 steps each that was over a second per page switch. The bindings round to Int instead.
 struct SliderRow: View {
     let title: String
     @Binding var value: Int
@@ -149,7 +152,7 @@ struct SliderRow: View {
         HStack {
             RowLabel(title: title)
             Slider(value: Binding(get: { Double(value) }, set: { value = Int($0.rounded()) }),
-                   in: Double(range.lowerBound)...Double(range.upperBound), step: 1)
+                   in: Double(range.lowerBound)...Double(range.upperBound))
                 .frame(minWidth: 80)
             Stepper(value: $value, in: range) {
                 Text(value > 0 && range.lowerBound < 0 ? "+\(value)" : "\(value)")
@@ -171,7 +174,7 @@ struct PanRow: View {
             Toggle("On", isOn: Binding(get: { value != 0 }, set: { value = $0 ? 51 : 0 })).toggleStyle(.checkbox)
             if value != 0 {
                 Text("R").font(.caption)
-                Slider(value: Binding(get: { Double(value - 1) }, set: { value = Int($0.rounded()) + 1 }), in: 0...100, step: 1)
+                Slider(value: Binding(get: { Double(value - 1) }, set: { value = Int($0.rounded()) + 1 }), in: 0...100)
                     .frame(maxWidth: 200)
                 Text("L").font(.caption)
                 Text("\(100 - (value - 1)):\(value - 1)").font(Theme.value).foregroundStyle(Theme.accent).frame(width: 50)

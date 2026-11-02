@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.2.2
+
+- Page switches up to 10× faster: sliders no longer carry a tick mark per step (AppKit was recomputing
+  100–256 tick rects per slider, several times per layout — 1.4 s of a 3 s profile). Found with
+  `sample`; values still snap to integers.
+- Render-stats timing now fires for every page switch (editor pages had been sharing one view identity).
+
+## 0.2.1
 
 - Faster drawing: theme colours resolve to pre-built NSColors (the dynamic provider was re-parsing hex
   strings on every draw); row labels no longer run a scale-to-fit pass.
