@@ -45,6 +45,8 @@ Audio: M1 outputs 1/L and 2/R → interface line inputs. Hear it through the int
 
 The bar under the toolbar: **In** and **Out** ports (the interface is picked automatically), **Ch**, and **Auto-send on edit**. ↻ rescans after plugging something in.
 
+At the right, a heartbeat dot: **M1 heard** (green) means bytes are arriving on In — a powered, cabled M1 sends active sensing continuously, so this proves the return path. **M1 silent** (amber) means nothing has arrived for 2 s. A *Send* only proves the data reached the interface; if the M1 doesn't acknowledge within 0.7 s the log says so and suggests what to check (at most once every 15 s while you keep editing).
+
 ### First run
 
 1. Library → **Fetch bank from M1** (about 20 seconds). A dated bank appears.
@@ -186,6 +188,8 @@ patchwork monitor [--raw]                watch what the M1 sends
 | "Write error" | Memory Protect on | GLOBAL 6 → Program protect OFF |
 | M1 silent to the app's notes | channel mismatch | GLOBAL 5 → Channel; match the *Ch* picker |
 | Fetch returns 100 identical names | M1 ignoring Program Change | GLOBAL 5 → Page+ → Combi/Prog Change ENA |
+| "Sent … but nothing came back on In", dot amber | M1 off or not cabled back to the interface | power, M1 MIDI OUT → interface IN, the *In* picker |
+| "M1 didn't acknowledge" but dot green | channel or Exclusive | GLOBAL 5 → Channel = *Ch*; Page+ → Exclusive ENA |
 | No ports listed | interface not seen | ↻ in the MIDI bar; check the USB cable |
 | Notes stuck | a note-off was lost | ⌘. (All notes off) |
 

@@ -33,6 +33,16 @@ final class AppModel: ObservableObject {
     @Published var status = "Starting…"
     @Published var lastAck: String?
 
+    // Link health. A Send only proves the bytes reached the interface, so the app also watches In:
+    // the M1 transmits active sensing (FE) about three times a second whenever it is powered and
+    // cabled, and acknowledges every dump with load completed / load error.
+    @Published var inputHeard = false            // anything received on In within the last 2 s
+    private var lastHeard: Date?
+    private var linkTimer: Timer?
+    private var awaitingAck: DispatchWorkItem?
+    private var lastSendWasQuiet = false
+    private var lastNoAckWarning: Date?
+
     // Banks (local, persisted) and transfers to/from the M1 — see Banks.swift
     @Published var banks: [Bank] = BankStore.load() { didSet { BankStore.save(banks) } }
     @Published var selectedBankID: UUID?
@@ -113,8 +123,12 @@ final class AppModel: ObservableObject {
             e.onSetupChanged = { [weak self] in
                 DispatchQueue.main.async { self?.refreshEndpoints() }
             }
+            e.onRawBytes = { [weak self] _ in
+                DispatchQueue.main.async { self?.lastHeard = Date() }
+            }
             engine = e
             refreshEndpoints()
+            linkTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.updateLink() }
         } catch {
             status = "CoreMIDI unavailable: \(error)"
             append("CoreMIDI init failed: \(error)", error: true)
@@ -158,7 +172,51 @@ final class AppModel: ObservableObject {
 
     func sendProgram(quiet: Bool = false) {
         pendingSend?.cancel()
-        send(ActiveSynth.programDump(program, channel: midiChannel), what: quiet ? nil : "Sent “\(program.name)” to edit buffer")
+        send(ActiveSynth.programDump(program, channel: midiChannel), what: quiet ? nil : "Sent “\(program.name)” to edit buffer", expectAck: true)
+    }
+
+    // MARK: Link health
+
+    private func updateLink() {
+        let heard = lastHeard.map { Date().timeIntervalSince($0) < 2 } ?? false
+        guard heard != inputHeard else { return }
+        inputHeard = heard
+        if heard { append("Hearing the M1 on In") }
+        else if lastHeard != nil { append("Nothing on In for 2 s — the M1 has gone quiet (powered off, or its MIDI OUT unplugged?)", error: true) }
+    }
+
+    /// Expect a load completed / load error within 0.7 s of a dump; otherwise say so, at most once per 15 s.
+    private func armAckTimeout(quiet: Bool) {
+        awaitingAck?.cancel()
+        lastSendWasQuiet = quiet
+        let work = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            self.awaitingAck = nil
+            self.noteMissingAck()
+        }
+        awaitingAck = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7, execute: work)
+    }
+
+    private func noteMissingAck() {
+        if let t = lastNoAckWarning, Date().timeIntervalSince(t) < 15 { return }
+        lastNoAckWarning = Date()
+        let out = destinations.first { $0.id == selectedDestination }?.name ?? "the output"
+        if inputHeard {
+            append("Sent to \(out) but the M1 didn't acknowledge within 0.7 s. It is alive on In, so check Global channel = \(channel) and GLOBAL → 5 → Exclusive = ENA", error: true)
+        } else {
+            append("Sent to \(out) but nothing came back on In — is the M1 powered on, cabled both ways, and on channel \(channel)? A connected M1 sends active sensing continuously", error: true)
+        }
+    }
+
+    /// Called for every acknowledgement; returns true when the log line for it should be skipped
+    /// (a routine load-completed for a quiet auto-send, which would otherwise flood the log).
+    private func acknowledged(_ m: M1SysEx.Message) -> Bool {
+        awaitingAck?.cancel()
+        awaitingAck = nil
+        lastNoAckWarning = nil
+        if case .loadCompleted = m, lastSendWasQuiet { lastSendWasQuiet = false; return true }
+        return false
     }
 
     /// Editor patch → M1 internal slot `writeSlot` (ack-driven; see Banks.swift).
@@ -181,7 +239,7 @@ final class AppModel: ObservableObject {
     func sendGlobal(quiet: Bool = false) {
         pendingGlobalSend?.cancel()
         guard let g = globalData else { append("No Global data loaded — Request it first", error: true); return }
-        send(M1SysEx.globalDump(g, channel: midiChannel), what: quiet ? nil : "Sent Global data (drum kits) to the M1 — stored there immediately")
+        send(M1SysEx.globalDump(g, channel: midiChannel), what: quiet ? nil : "Sent Global data (drum kits) to the M1 — stored there immediately", expectAck: true)
         globalDirty = false
         globalAsReceived = g
     }
@@ -305,13 +363,14 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func send(_ bytes: [UInt8], what: String?) {
+    func send(_ bytes: [UInt8], what: String?, expectAck: Bool = false) {
         guard let engine = engine, selectedDestination != 0 else {
             append("No MIDI output selected", error: true); return
         }
         do {
             try engine.send(bytes, to: selectedDestination)
             if let w = what { append(w) }
+            if expectAck { armAckTimeout(quiet: what == nil) }
         } catch {
             append("Send failed: \(error)", error: true)
         }
@@ -329,6 +388,7 @@ final class AppModel: ObservableObject {
             if transfer != nil, let generic = ActiveSynth.parse(bytes), transferHandle(generic.message) { return }
             // Then the M1's own extras (mode data, Global data, panel parameter changes).
             let parsed = try M1SysEx.parse(bytes)
+            if parsed.message.isAck, acknowledged(parsed.message) { return }
             switch parsed.message {
             case .programDump(let p):
                 pendingDumpRequest = false

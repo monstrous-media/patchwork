@@ -80,5 +80,6 @@ F0 42 3g 19 ff … F7     42 Korg · 3g channel g · 19 M1 family · ff function
 
 ## Licence
 
-MIT — see `LICENSE`. Korg and M1 are trademarks of Korg Inc.; this project is not affiliated with Korg.
-Don't commit factory banks or instrument dumps (they're Korg's copyright).
+MIT, © monstrous-media — see `LICENSE`. Korg and M1 are trademarks of Korg Inc.; this project is not affiliated
+with Korg. Don't commit factory banks or instrument dumps (they're Korg's copyright): `bank/`, `*.syx`,
+`factory*.json` and `*-bank.json` are gitignored for that reason.

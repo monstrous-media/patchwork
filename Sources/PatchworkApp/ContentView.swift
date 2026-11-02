@@ -244,10 +244,36 @@ struct MIDIBar: View {
             Toggle("Auto-send on edit", isOn: $model.autoSend).toggleStyle(.switch)
                 .help("Send every edit to the M1's edit buffer as you make it (about 80 ms after the control stops moving)")
             Spacer()
+            LinkIndicator()
             Button { model.refreshEndpoints() } label: { Image(systemName: "arrow.clockwise") }
                 .help("Rescan MIDI devices after plugging something in")
         }
         .padding(.horizontal, 10).padding(.vertical, 6)
+    }
+}
+
+/// Heartbeat: is anything arriving on In? The M1 sends active sensing continuously while powered and
+/// cabled, so this is green when the return path works and amber when the app is talking to nobody.
+struct LinkIndicator: View {
+    @EnvironmentObject var model: AppModel
+
+    private var state: (color: Color, text: String, help: String) {
+        if model.selectedSource == 0 {
+            return (.gray, "No In", "No MIDI input selected — replies and acknowledgements from the M1 can't be seen")
+        }
+        if model.inputHeard {
+            return (.green, "M1 heard", "Bytes are arriving on In (the M1's active sensing or replies), so the return cable works")
+        }
+        return (.orange, "M1 silent", "Nothing has arrived on In for 2 s. A powered, cabled M1 sends active sensing continuously — check power, the M1 MIDI OUT → interface IN cable, and the In port above")
+    }
+
+    var body: some View {
+        let s = state
+        HStack(spacing: 5) {
+            Circle().fill(s.color).frame(width: 8, height: 8)
+            Text(s.text).font(.caption).foregroundStyle(.secondary)
+        }
+        .help(s.help)
     }
 }
 

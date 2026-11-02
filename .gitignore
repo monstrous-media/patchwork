@@ -12,3 +12,5 @@ __pycache__/
 bank/
 current.json
 global-backup*.syx
+factory*.json
+*-bank.json
