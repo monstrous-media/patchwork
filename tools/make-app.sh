@@ -8,7 +8,7 @@
 # Output: dist/Patchwork.app and dist/patchwork (CLI), plus dist/Patchwork-<version>.zip
 set -eu
 cd "$(dirname "$0")/.."
-# Version: VERSION env → latest tag (v1.2.3 → 1.2.3) → 0.0.0-<commit> → 0.0.0
+# Version: VERSION env -> latest tag (v1.2.3 -> 1.2.3) -> 0.0.0-<commit> -> 0.0.0
 if [ -z "${VERSION:-}" ]; then
   if tag=$(git describe --tags --exact-match 2>/dev/null); then VERSION="${tag#v}"
   elif hash=$(git rev-parse --short HEAD 2>/dev/null); then VERSION="0.0.0-$hash"
@@ -17,7 +17,7 @@ fi
 BUNDLE_ID="${BUNDLE_ID:-media.monstrous.patchwork}"
 MIN_OS="13.0"
 
-echo "building release…"
+echo "building release..."
 swift build -c release --product PatchworkApp
 swift build -c release --product patchwork
 BIN=.build/release
@@ -27,7 +27,7 @@ APP=dist/Patchwork.app
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN/PatchworkApp" "$APP/Contents/MacOS/Patchwork"
 cp "$BIN/patchwork" dist/patchwork
-# SwiftPM resource bundle (the guide) — Bundle.module looks for it in Contents/Resources
+# SwiftPM resource bundle (the guide) - Bundle.module looks for it in Contents/Resources
 for b in "$BIN"/*.bundle; do [ -d "$b" ] && cp -R "$b" "$APP/Contents/Resources/"; done
 
 # Icon: build an .icns from assets/icon-1024.png if the tools are present
@@ -60,9 +60,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 
 if [ -n "${SIGN_IDENTITY:-}" ]; then
-  echo "signing with $SIGN_IDENTITY…"
-  codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" dist/patchwork
-  codesign --force --deep --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP"
+  echo "signing with ${SIGN_IDENTITY}..."
+  codesign --force --options runtime --timestamp --sign "${SIGN_IDENTITY}" dist/patchwork
+  codesign --force --deep --options runtime --timestamp --sign "${SIGN_IDENTITY}" "$APP"
   codesign --verify --strict --verbose=2 "$APP"
 fi
 
@@ -70,8 +70,8 @@ ZIP="dist/Patchwork-$VERSION.zip"
 ( cd dist && ditto -c -k --keepParent Patchwork.app "../$ZIP" )
 
 if [ -n "${SIGN_IDENTITY:-}" ] && [ -n "${NOTARY_PROFILE:-}" ]; then
-  echo "notarising…"
-  xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait
+  echo "notarising..."
+  xcrun notarytool submit "$ZIP" --keychain-profile "${NOTARY_PROFILE}" --wait
   xcrun stapler staple "$APP"
   rm -f "$ZIP"; ( cd dist && ditto -c -k --keepParent Patchwork.app "../$ZIP" )
 fi
