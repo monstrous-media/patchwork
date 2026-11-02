@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.1.1
+
+- Fix crash on launch when running the downloaded `Patchwork.app` (the built-in guide's resource
+  bundle was looked up via SwiftPM's `Bundle.module`, which only works on the machine that compiled
+  it). The app now finds the bundle itself and shows a message instead of crashing if it is missing;
+  `make-app.sh` refuses to package an app without it.
+
+## 0.1.0
 
 First public version.
 

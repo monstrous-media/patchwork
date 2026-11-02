@@ -27,8 +27,13 @@ APP=dist/Patchwork.app
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN/PatchworkApp" "$APP/Contents/MacOS/Patchwork"
 cp "$BIN/patchwork" dist/patchwork
-# SwiftPM resource bundle (the guide) - Bundle.module looks for it in Contents/Resources
+# SwiftPM resource bundle (the guide). The app locates it itself under Contents/Resources
+# (HelpDoc.resourceBundle), not via Bundle.module, which would crash on any other machine.
 for b in "$BIN"/*.bundle; do [ -d "$b" ] && cp -R "$b" "$APP/Contents/Resources/"; done
+if [ ! -f "$APP/Contents/Resources/Patchwork_PatchworkApp.bundle/Resources/guide.md" ]; then
+  echo "error: resource bundle missing from $APP/Contents/Resources (guide.md not found)" >&2
+  exit 1
+fi
 
 # Icon: build an .icns from assets/icon-1024.png if the tools are present
 if [ -f assets/icon-1024.png ] && command -v iconutil >/dev/null; then

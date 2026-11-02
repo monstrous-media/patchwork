@@ -40,12 +40,29 @@ enum HelpDoc {
         return out
     }
 
+    /// The SwiftPM resource bundle, found without `Bundle.module`: SwiftPM's generated accessor only
+    /// looks next to the executable (fine for `swift run`) or at the absolute `.build` path of the
+    /// machine that compiled it, and calls fatalError otherwise -- which is a crash on launch for
+    /// anyone who downloads the .app. make-app.sh puts the bundle in Contents/Resources.
+    static let resourceBundle: Bundle? = {
+        let name = "Patchwork_PatchworkApp.bundle"
+        let candidates: [URL?] = [
+            Bundle.main.resourceURL?.appendingPathComponent(name),   // Patchwork.app/Contents/Resources
+            Bundle.main.bundleURL.appendingPathComponent(name),      // .build/<config>/ when run via swift run
+            Bundle.main.executableURL?.deletingLastPathComponent().appendingPathComponent(name),
+        ]
+        for case let url? in candidates {
+            if let b = Bundle(url: url) { return b }
+        }
+        return nil
+    }()
+
     static func loadGuide() -> String {
-        if let url = Bundle.module.url(forResource: "guide", withExtension: "md", subdirectory: "Resources"),
+        if let url = resourceBundle?.url(forResource: "guide", withExtension: "md", subdirectory: "Resources"),
            let s = try? String(contentsOf: url, encoding: .utf8) {
             return s
         }
-        return "# Guide not found\n\nThe bundled guide.md is missing from the app resources."
+        return "# Guide not found\n\nThe bundled guide.md is missing from the app resources. The same guide is online at https://github.com/monstrous-media/patchwork/blob/main/docs/guide.md"
     }
 
     static func parse(_ markdown: String) -> [MDBlock] {
