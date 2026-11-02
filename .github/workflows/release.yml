@@ -3,6 +3,11 @@ on:
   push:
     tags: ['v*']
 
+# Uses the monstrous-media organisation secrets:
+#   APPLE_CERTIFICATE (base64 .p12), APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+#   APPLE_ID, APPLE_PASSWORD (app-specific), APPLE_TEAM_ID
+# When they are absent (forks), the release is built unsigned.
+
 jobs:
   release:
     runs-on: macos-14
@@ -14,12 +19,11 @@ jobs:
       - name: Tests
         run: swift test 2>&1 | tail -5
 
-      # Signing + notarisation run only when the secrets exist (forks and early releases stay unsigned).
       - name: Import Developer ID certificate
-        if: ${{ secrets.DEVELOPER_ID_CERT_P12 != '' }}
+        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
         env:
-          CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
-          CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+          CERT_P12: ${{ secrets.APPLE_CERTIFICATE }}
+          CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
           echo "$CERT_P12" | base64 --decode > cert.p12
           security create-keychain -p ci build.keychain
@@ -27,17 +31,24 @@ jobs:
           security unlock-keychain -p ci build.keychain
           security import cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k ci build.keychain
-          echo "SIGN_IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep 'Developer ID Application' | head -1 | sed 's/.*"\(.*\)".*/\1/')" >> "$GITHUB_ENV"
+          rm -f cert.p12
+          echo "SIGN_IDENTITY=${{ secrets.APPLE_SIGNING_IDENTITY }}" >> "$GITHUB_ENV"
+
       - name: Store notarisation credentials
-        if: ${{ env.SIGN_IDENTITY != '' && secrets.APPLE_ID != '' }}
+        if: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_ID != '' }}
         run: |
-          xcrun notarytool store-credentials ci-notary --apple-id "${{ secrets.APPLE_ID }}" --team-id "${{ secrets.APPLE_TEAM_ID }}" --password "${{ secrets.APPLE_APP_PASSWORD }}"
+          xcrun notarytool store-credentials ci-notary \
+            --apple-id "${{ secrets.APPLE_ID }}" \
+            --team-id "${{ secrets.APPLE_TEAM_ID }}" \
+            --password "${{ secrets.APPLE_PASSWORD }}"
           echo "NOTARY_PROFILE=ci-notary" >> "$GITHUB_ENV"
 
-      - name: Build app
+      - name: Build app (signed + notarised when credentials are present)
         run: VERSION="${GITHUB_REF_NAME#v}" tools/make-app.sh
+
       - name: Package CLI
         run: (cd dist && tar -czf "patchwork-cli-${GITHUB_REF_NAME#v}-macos.tar.gz" patchwork)
+
       - uses: softprops/action-gh-release@v2
         with:
           files: |
