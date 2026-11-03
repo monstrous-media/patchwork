@@ -27,7 +27,7 @@ public func fuzzOne(_ data: UnsafePointer<UInt8>, _ size: Int) -> CInt {
 /// libFuzzer's driver: parses the usual -max_total_time etc. from argv and loops over `fuzzOne`.
 @_silgen_name("LLVMFuzzerRunDriver")
 func LLVMFuzzerRunDriver(_ argc: UnsafeMutablePointer<CInt>,
-                         _ argv: UnsafeMutablePointer<UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?>,
+                         _ argv: UnsafeMutablePointer<UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>>,
                          _ callback: @convention(c) (UnsafePointer<UInt8>, Int) -> CInt) -> CInt
 
 @main
