@@ -15,7 +15,9 @@ week. Once fixed, the advisory is published with credit unless you ask otherwise
 - Anything that lets a crafted `.syx` or `.json` file do more than load a patch (crashes on malformed input
   are bugs we want to hear about too).
 - The release pipeline: the shipped `Patchwork.app` is signed with a Developer ID and notarised by the
-  `Release` workflow from a tag; a build that doesn't verify with `spctl -a -vv Patchwork.app` is a problem.
+  `Release` workflow from a tag, and every release asset carries a build-provenance attestation. A build that
+  doesn't verify with `spctl -a -vv Patchwork.app` or `gh attestation verify <asset> --repo monstrous-media/patchwork`
+  is a problem.
 
 ## Supported versions
 
