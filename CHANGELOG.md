@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 - `FuzzSysEx` libFuzzer target over `M1SysEx.parse` and `KorgPacking.unpack`; the Linux CI job builds
   it with `-sanitize=fuzzer,address` and fuzzes for two minutes from the test vectors, uploading any
