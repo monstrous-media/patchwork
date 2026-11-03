@@ -16,6 +16,20 @@ jobs:
         run: swift test 2>&1 | tail -20
       - name: Build release products
         run: swift build -c release
+      - name: CLI refuses to write to the M1 without --yes when not interactive
+        run: |
+          set +e
+          out=$(.build/release/patchwork write 5 </dev/null 2>&1); code=$?
+          set -e
+          echo "exit $code: $out"
+          test "$code" -eq 2 && grep -q -- "without --yes" <<<"$out"
+          # With --yes the guard is passed and the command fails later, on the missing interface, not on consent;
+          # --yes before the positional must not swallow it.
+          set +e
+          out=$(.build/release/patchwork restore --yes examples/glass-pad.json --slot 3 </dev/null 2>&1); code=$?
+          set -e
+          echo "exit $code: $out"
+          test "$code" -ne 2 && ! grep -q -- "without --yes" <<<"$out" && grep -q -- "MIDI" <<<"$out"
       - name: Assemble app (unsigned)
         run: tools/make-app.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

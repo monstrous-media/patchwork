@@ -1,6 +1,11 @@
 import Foundation
 import PatchworkCore
 import PatchworkMIDI
+#if canImport(Darwin)
+import Darwin      // isatty
+#elseif canImport(Glibc)
+import Glibc
+#endif
 
 // patchwork — command-line companion for the Korg M1.
 //
@@ -19,8 +24,12 @@ import PatchworkMIDI
 //   patchwork bank --syx bank.syx [--json-dir bank/]  back up all 100 internal programs, one dump at a time (~20 s)
 //   patchwork restore bank.syx [--verify]             write a whole bank back (slot = position in file), optionally read back and compare
 //   patchwork restore patch.json --slot 57 [--verify] write one program to one slot
+//
+//   Commands that overwrite what the M1 stores — restore, write, send --write, global --send / --load —
+//   describe what they will replace and ask for a `y` at the terminal. Pass --yes to skip the prompt;
+//   without it, a non-interactive run (script, pipe, CI, agent) exits 2 and sends nothing.
 //   patchwork params                                  print the parameter reference as Markdown
-//   patchwork global [--syx f] [--kit N --json f | --load f] [--send f]   drum kits (Global data): show, save, load, send
+//   patchwork global [--syx f] [--kit N --json f | --load f] [--send f] [--yes]   drum kits (Global data): show, save, load, send
 //   patchwork mode [program|combi|global|seq]         show the M1's mode, or switch it (dump/send switch to Program automatically)
 //   patchwork raw "F0 42 30 19 12 F7"                 send arbitrary SysEx, print replies for 2 s
 //   patchwork monitor [--raw]                         print incoming SysEx (learn parameter-change page/pos); --raw shows every byte
@@ -32,13 +41,18 @@ struct Options {
     var positional: [String] = []
     var flags: [String: String] = [:]
 
+    /// Switches that never take a value, so `--yes bank.syx` keeps bank.syx as the positional.
+    static let switches: Set<String> = ["yes", "verify", "raw"]
+
     init(_ args: [String]) {
         var i = 0
         while i < args.count {
             let a = args[i]
             if a.hasPrefix("--") || (a.hasPrefix("-") && a.count == 2) {
                 let key = a.hasPrefix("--") ? String(a.dropFirst(2)) : String(a.dropFirst())
-                if i + 1 < args.count && !args[i + 1].hasPrefix("-") {
+                if Options.switches.contains(key) {
+                    flags[key] = "true"; i += 1
+                } else if i + 1 < args.count && !args[i + 1].hasPrefix("-") {
                     flags[key] = args[i + 1]; i += 2
                 } else {
                     flags[key] = "true"; i += 1
@@ -64,6 +78,23 @@ func fail(_ message: String) -> Never {
 func note(_ message: String) {
     FileHandle.standardError.write(Data((message + "\n").utf8))
 }
+
+/// Gate for anything that overwrites what the M1 stores. Call BEFORE opening ports, so a refusal
+/// sends nothing. `--yes` skips the prompt; at a terminal the user is told what will be replaced and
+/// asked for a y; anywhere else (pipe, script, CI) the command exits 2 with a message that names --yes.
+func requireConsent(_ opts: Options, toOverwrite description: String) {
+    let decision = WriteConsent.decide(
+        yes: opts.flag("yes") != nil,
+        interactive: isatty(0) != 0,
+        description: "This will " + description + " (Memory Protect must be OFF).",
+        prompt: { q in FileHandle.standardError.write(Data(q.utf8)); return readLine() })
+    if case .refused(let why) = decision {
+        FileHandle.standardError.write(Data(("error: " + why + "\n").utf8))
+        exit(2)
+    }
+}
+
+func slotName(_ n: Int) -> String { String(format: "I%02d", n) }
 
 func readProgram(path: String) throws -> M1Program {
     let data = try Data(contentsOf: URL(fileURLWithPath: path))
@@ -206,6 +237,7 @@ func ensureProgramMode(_ ports: Ports) throws {
 let argv = Array(CommandLine.arguments.dropFirst())
 guard let command = argv.first else {
     print("usage: patchwork <ports|dump|bank|restore|send|write|convert|validate|random|mutate|morph|describe|play|params|global|mode|raw|monitor> …  (see source header)")
+    print("       restore, write, send --write and global --send/--load overwrite the M1: they ask at a terminal, or need --yes")
     exit(0)
 }
 let opts = Options(Array(argv.dropFirst()))
@@ -243,18 +275,24 @@ do {
     case "send":
         guard let path = opts.positional.first else { fail("send needs a .json or .syx file") }
         let program = try readProgram(path: path)
+        var writeSlot: Int? = nil
+        if let slot = opts.flag("write") {
+            guard let n = Int(slot), n >= 0, n <= 99 else { fail("--write needs a slot 0…99") }
+            writeSlot = n
+            requireConsent(opts, toOverwrite: "send “\(program.name)” to the edit buffer and then store it in slot \(slotName(n)), replacing the program the M1 keeps there")
+        }
         let ports = try openPorts(opts)
         try ensureProgramMode(ports)
         note("sending “\(program.name)” to \(ports.output.name) …")
         try waitForAck(ports, after: M1SysEx.programDump(program, channel: ports.channel), what: "acks")
-        if let slot = opts.flag("write") {
-            guard let n = Int(slot), n >= 0, n <= 99 else { fail("--write needs a slot 0…99") }
+        if let n = writeSlot {
             note("writing to program slot \(n) …")
             try waitForAck(ports, after: M1SysEx.programWriteRequest(slot: n, channel: ports.channel), what: "acks")
         }
 
     case "write":
-        guard let s = opts.positional.first, let n = Int(s), n >= 0, n <= 99 else { fail("write needs a slot 0…99") }
+        guard let s = opts.positional.first, let n = Int(s), n >= 0, n <= 99 else { fail("write needs a slot 0…99 [--yes]") }
+        requireConsent(opts, toOverwrite: "store the M1's edit buffer in slot \(slotName(n)), replacing the program kept there")
         let ports = try openPorts(opts)
         try waitForAck(ports, after: M1SysEx.programWriteRequest(slot: n, channel: ports.channel), what: "acks")
 
@@ -368,7 +406,7 @@ do {
     case "restore":
         // patchwork restore bank.syx [--verify]            write every program in the file to its slot (0, 1, 2 …)
         // patchwork restore patch.json --slot 57 [--verify] write one program to one slot
-        guard let path = opts.positional.first else { fail("restore <bank.syx | patch> [--slot N] [--verify]") }
+        guard let path = opts.positional.first else { fail("restore <bank.syx | patch> [--slot N] [--verify] [--yes]") }
         let items: [(slot: Int, program: M1Program)]
         if let s = opts.flag("slot") {
             guard let n = Int(s), n >= 0, n <= 99 else { fail("--slot must be 0…99") }
@@ -378,6 +416,9 @@ do {
             guard !programs.isEmpty else { fail("no program dumps found in \(path) (for a single JSON patch use --slot N)") }
             items = programs.prefix(100).enumerated().map { (slot: $0.offset, program: $0.element) }
         }
+        let slots = WriteConsent.slotRanges(items.map(\.slot), label: slotName)
+        let names = items.prefix(3).map { "“\($0.program.name)”" }.joined(separator: ", ") + (items.count > 3 ? ", …" : "")
+        requireConsent(opts, toOverwrite: "overwrite M1 slot\(items.count == 1 ? "" : "s") \(slots) (\(items.count) program\(items.count == 1 ? "" : "s"): \(names))")
         let ports = try openPorts(opts)
         try ensureProgramMode(ports)
         note("writing \(items.count) program\(items.count == 1 ? "" : "s") to the M1 (Memory Protect must be OFF) …")
@@ -424,6 +465,11 @@ do {
         // patchwork global --send global.syx             send a saved Global dump back
         // patchwork global --kit 2 --json kit2.json       save one kit as JSON
         // patchwork global --kit 2 --load kit2.json       replace one kit from JSON and send the Global data back
+        if opts.flag("send") != nil {
+            requireConsent(opts, toOverwrite: "replace the M1's Global data (settings and all four drum kits) with \(opts.flag("send")!); the M1 stores it immediately")
+        } else if opts.flag("load") != nil {
+            requireConsent(opts, toOverwrite: "replace drum kit \(opts.flag("kit") ?? "?") on the M1 from \(opts.flag("load")!) and store the Global data immediately")
+        }
         let ports = try openPorts(opts)
         if let path = opts.flag("send") {
             let msgs = M1SysEx.splitMessages([UInt8](try Data(contentsOf: URL(fileURLWithPath: path))))

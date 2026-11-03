@@ -21,7 +21,9 @@ synth; the Patchwork app opens the same files.
    `patchwork play --phrase "Pad swell"`, `"Bass riff" --transpose -12`, `"Arpeggio"`, `"Velocity ramp"` (reveals velocity
    sensitivity), `"Octaves"` (reveals keyboard tracking). The user can also hear it from the Patchwork play bar.
 5. **Iterate** on their feedback by editing the JSON again — change 1–3 parameters per step and say which ones.
-6. **Store** only when asked: `patchwork send patch.json --write 57` writes to internal slot I57 (Memory Protect must be OFF).
+6. **Store** only when asked: `patchwork send patch.json --write 57 --yes` writes to internal slot I57 (Memory Protect must be OFF).
+   Commands that overwrite the M1 (`--write`, `write`, `restore`, `global --send/--load`) refuse to run without a
+   terminal confirmation or `--yes`; pass `--yes` only after the user has agreed to that specific slot.
 
 Describe a patch with `patchwork describe patch.json`. Convert between formats with `patchwork convert in.json out.syx`.
 

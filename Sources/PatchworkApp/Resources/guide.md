@@ -170,6 +170,7 @@ patchwork play --notes "C4 E4 G4"        audition;  --phrase "Pad swell"  --tran
 patchwork bank --syx f.syx --json-dir d/ Fetch bank → files
 patchwork restore f.syx --verify         Restore (slot = position in file)
 patchwork restore p.json --slot 57       write one program to one slot
+                                         (restore / write / --write / global --send ask first, or take --yes)
 patchwork describe / validate / convert  inspect and convert patches
 patchwork random / mutate / morph        generators, to JSON
 patchwork global [--kit 2 --json k.json] drum kits: show / save / --load k.json / --send g.syx

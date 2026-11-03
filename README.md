@@ -78,7 +78,7 @@ patchwork dump --json current.json           # grab what the M1 is playing now
 patchwork send examples/glass-pad.json       # audition
 patchwork play --phrase "Pad swell"
 patchwork bank --syx factory.syx --json-dir bank/   # back up all 100 programs (do this before any Write!)
-patchwork restore factory.syx --verify
+patchwork restore factory.syx --verify       # asks first; add --yes in scripts (otherwise a non-interactive run refuses)
 patchwork global --syx global.syx            # drum kits and global settings
 patchwork monitor --raw                      # watch every byte that arrives
 ```
