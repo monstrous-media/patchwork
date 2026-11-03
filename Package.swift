@@ -9,6 +9,7 @@ let package = Package(
         .library(name: "PatchworkMIDI", targets: ["PatchworkMIDI"]),
         .executable(name: "patchwork", targets: ["patchwork"]),
         .executable(name: "PatchworkApp", targets: ["PatchworkApp"]),
+        .executable(name: "FuzzSysEx", targets: ["FuzzSysEx"]),
     ],
     targets: [
         // Pure Swift, no Apple-only imports: the SynthDefinition protocol, generic codec/model/generator
@@ -21,6 +22,9 @@ let package = Package(
         // SwiftUI editor app.
         .executableTarget(name: "PatchworkApp", dependencies: ["PatchworkCore", "PatchworkMIDI"], path: "Sources/PatchworkApp",
                           resources: [.copy("Resources")]),
+        // libFuzzer harness for the SysEx parser and 7-in-8 unpacker (see Sources/FuzzSysEx/Fuzz.swift
+        // for the instrumented build). Links as a no-op executable in a plain build.
+        .executableTarget(name: "FuzzSysEx", dependencies: ["PatchworkCore"], path: "Sources/FuzzSysEx"),
         .testTarget(
             name: "PatchworkCoreTests",
             dependencies: ["PatchworkCore"],
