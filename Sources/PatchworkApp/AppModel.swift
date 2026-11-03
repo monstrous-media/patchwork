@@ -224,6 +224,10 @@ final class AppModel: ObservableObject {
     /// the M1 and cannot be undone, so nothing reaches it from a single click or keystroke.
     @Published var confirmWrite = false
 
+    /// True once a full Fetch of the M1 has completed in this session; only then may the snapshot
+    /// before a Restore be skipped (the user already holds a fresh copy of what is on the synth).
+    @Published var fetchedThisSession = false
+
     /// Editor patch → M1 internal slot `writeSlot` (ack-driven; see Banks.swift). Callers that act on
     /// user input go through `confirmWrite` first.
     func writeToSlot() {

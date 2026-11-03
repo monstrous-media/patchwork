@@ -352,6 +352,7 @@ struct LibraryView: View {
     @State private var morphT = 0.5
     @State private var confirmRestore = false
     @State private var verifyAfterRestore = true
+    @State private var skipSnapshot = false
     @State private var confirmWriteSlot: Int?
     @State private var confirmDeleteBank = false
 
@@ -430,9 +431,13 @@ struct LibraryView: View {
                         .help("Verify: re-read this bank's filled slots from the M1 and report any that differ")
                     Button("Restore to M1…") { confirmRestore = true }
                         .buttonStyle(.borderedProminent)
-                        .help("Restore: write every filled slot of this bank into the M1, one slot at a time, each acknowledged. Asks first. Needs Memory Protect off.")
+                        .help("Restore: first snapshot the M1 slots about to change into a “Before restore” bank, then write every filled slot of this bank into the M1, one at a time, each acknowledged. Asks first. Needs Memory Protect off.")
                     Toggle("verify after", isOn: $verifyAfterRestore).toggleStyle(.checkbox)
                         .help("After a Restore, read every written slot back and compare")
+                    if model.fetchedThisSession {
+                        Toggle("skip snapshot", isOn: $skipSnapshot).toggleStyle(.checkbox)
+                            .help("Restore without first reading the target slots into a “Before restore” bank. Offered only because you fetched the M1's bank earlier this session, so that bank is the backup.")
+                    }
                     Button("Export .syx…") { exportBank(model.banks[i]) }
                         .help("Save this bank as a standard SysEx file (program dumps in slot order) — your backup")
                     Spacer()
@@ -451,10 +456,12 @@ struct LibraryView: View {
             .padding(10)
             .confirmationDialog("Overwrite the M1's internal programs with “\(model.banks[i].name)”?", isPresented: $confirmRestore) {
                 Button("Restore \(model.banks[i].filledCount) slots", role: .destructive) {
-                    model.restoreBankToM1(model.banks[i], verify: verifyAfterRestore)
+                    model.restoreBankToM1(model.banks[i], verify: verifyAfterRestore, snapshot: !(skipSnapshot && model.fetchedThisSession))
                 }
             } message: {
-                Text("Each filled slot replaces the program stored in that slot on the M1. Memory Protect must be OFF. Make sure you have exported the current M1 bank first.")
+                Text(skipSnapshot && model.fetchedThisSession
+                     ? "Each filled slot replaces the program stored in that slot on the M1. Memory Protect must be OFF. No new snapshot: the bank you fetched earlier this session is the backup."
+                     : "Each filled slot replaces the program stored in that slot on the M1. Memory Protect must be OFF. The slots about to change are read into a “Before restore” bank first (and saved as .syx), so the previous programs can be restored from the library.")
             }
             Divider()
 

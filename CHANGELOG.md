@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Restore to M1 first snapshots the slots about to change into a “Before restore <date>” bank (kept in
+  the library and saved as .syx under Application Support/Patchwork/restore-backups); the write only
+  starts when the snapshot completes, and the log names the backup. A “skip snapshot” option appears
+  only after a full Fetch in the same session.
 - Writing the editor patch to an M1 slot now asks first, whichever way it is triggered (toolbar, M1
   menu, keyboard); the shortcut is ⇧⌘W (⌘W is Close Window on macOS).
 - Releases carry a SLSA build-provenance attestation for the app zip and CLI tarball; verify a download
