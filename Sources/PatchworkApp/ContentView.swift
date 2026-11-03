@@ -93,6 +93,14 @@ struct ContentView: View {
         } message: {
             Text(model.errorMessage ?? "")
         }
+        // One confirmation for every route to a toolbar/menu Write (button, ⇧⌘W, menu item): the same
+        // shape as the Library's per-slot Write dialog.
+        .confirmationDialog("Write “\(model.program.name)” to the M1's slot \(Bank.slotLabel(model.writeSlot))?",
+                            isPresented: $model.confirmWrite) {
+            Button("Write to \(Bank.slotLabel(model.writeSlot))", role: .destructive) { model.writeToSlot() }
+        } message: {
+            Text("This replaces the program the M1 currently stores in that slot and cannot be undone (Memory Protect must be OFF). Export the bank first if you have not.")
+        }
         .onAppear {
             NSApp.activate(ignoringOtherApps: true)
             appearance.apply()
@@ -191,9 +199,9 @@ struct ContentView: View {
                 .buttonStyle(.borderedProminent)
                 .help("Send: push the editor patch to the M1's edit buffer — temporary until written (⌘S)")
             HStack(spacing: 6) {
-                Button { model.writeToSlot() } label: { Label("Write", systemImage: "internaldrive") }
+                Button { model.confirmWrite = true } label: { Label("Write", systemImage: "internaldrive") }
                     .labelStyle(.titleAndIcon)
-                    .help("Write: store the editor patch in the M1's slot chosen here (⌘W). Needs Memory Protect off.")
+                    .help("Write: store the editor patch in the M1's slot chosen here, after confirming (⇧⌘W). Needs Memory Protect off.")
                 Picker("Slot", selection: $model.writeSlot) {
                     ForEach(0..<Bank.slotCount, id: \.self) { Text(Bank.slotLabel($0)).tag($0) }
                 }

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Writing the editor patch to an M1 slot now asks first, whichever way it is triggered (toolbar, M1
+  menu, keyboard); the shortcut is ⇧⌘W (⌘W is Close Window on macOS).
 - Releases carry a SLSA build-provenance attestation for the app zip and CLI tarball; verify a download
   with `gh attestation verify Patchwork-x.y.z.zip --repo monstrous-media/patchwork`.
 

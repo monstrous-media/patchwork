@@ -34,7 +34,9 @@ struct PatchworkApp: App {
                 Button("Fetch bank from M1 (one program at a time)") { model.fetchBankFromM1() }
                 Button("Request bank as one 16 KB dump") { model.requestAllPrograms() }
                 Button("Send to edit buffer") { model.sendProgram() }.keyboardShortcut("s")
-                Button("Write to slot I\(String(format: "%02d", model.writeSlot))") { model.writeToSlot() }.keyboardShortcut("w")
+                // ⇧⌘W: ⌘W is Close Window (and ⌥⌘W Close All) on macOS. Asks before writing.
+                Button("Write to slot I\(String(format: "%02d", model.writeSlot))…") { model.confirmWrite = true }
+                    .keyboardShortcut("w", modifiers: [.command, .shift])
                 Divider()
                 Button(model.isPlaying ? "Stop phrase" : "Play phrase") { model.togglePlay() }.keyboardShortcut(.return, modifiers: .command)
                 Button("All notes off") { model.stop() }.keyboardShortcut(".", modifiers: .command)

@@ -219,7 +219,13 @@ final class AppModel: ObservableObject {
         return false
     }
 
-    /// Editor patch → M1 internal slot `writeSlot` (ack-driven; see Banks.swift).
+    /// Set by the toolbar button and the M1 ▸ Write menu command; ContentView shows the confirmation
+    /// dialog and calls `writeToSlot()` only if the user confirms. A Write replaces a program stored in
+    /// the M1 and cannot be undone, so nothing reaches it from a single click or keystroke.
+    @Published var confirmWrite = false
+
+    /// Editor patch → M1 internal slot `writeSlot` (ack-driven; see Banks.swift). Callers that act on
+    /// user input go through `confirmWrite` first.
     func writeToSlot() {
         writeProgram(program, toM1Slot: writeSlot, mirrorToSelectedBank: mirrorWritesToBank && selectedBankID != nil)
     }
