@@ -66,6 +66,7 @@ Sources/PatchworkCore   pure Swift: SynthDefinition protocol, generic codec/mode
 Sources/PatchworkMIDI   CoreMIDI wrapper (endpoints, send, SysEx reassembly)
 Sources/patchwork       CLI: ports · dump · bank · restore · send · write · play · global · random · mutate · morph · describe · params · mode · monitor
 Sources/PatchworkApp    SwiftUI app: generated editor pages, play bar, banks & slots, drum kits, undo, theme, built-in guide
+Sources/FuzzSysEx       libFuzzer harness for the SysEx parser (built instrumented in CI; see Fuzz.swift)
 schema/ skills/         JSON schema + Claude skill for authoring patches
 docs/                   user guide, generated parameter reference, screenshots
 tools/                  Python reference codec (test vectors), make-app.sh, sync-docs.sh

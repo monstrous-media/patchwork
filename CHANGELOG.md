@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `FuzzSysEx` libFuzzer target over `M1SysEx.parse` and `KorgPacking.unpack`; the Linux CI job builds
+  it with `-sanitize=fuzzer,address` and fuzzes for two minutes from the test vectors, uploading any
+  crash input. An in-process smoke test keeps the same property under `swift test`.
 - CLI: `restore`, `write`, `send --write` and `global --send` / `--load` now describe what they will
   overwrite and ask for a `y` at the terminal, or take `--yes`; a non-interactive run without it exits 2
   with "refusing to write to the M1 without --yes" and sends nothing. The Claude skill passes `--yes`
