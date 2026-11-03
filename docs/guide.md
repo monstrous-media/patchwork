@@ -16,7 +16,7 @@ The verbs match the direction of travel:
 |---|---|---|
 | **Request** | M1 edit buffer → editor | toolbar ⬇, ⌘R |
 | **Send** | editor → M1 edit buffer | toolbar ⬆, ⌘S, or automatically with *Auto-send* |
-| **Write** | editor → M1 slot | toolbar 🖴 + slot picker, ⌘W |
+| **Write** | editor → M1 slot | toolbar 🖴 + slot picker, ⇧⌘W — asks first |
 | **Fetch bank** | all 100 M1 slots → a new local bank | Library |
 | **Request / Send (Global)** | the M1's drum kits ↔ the Drum kits page (stored on Send) | Drum kits |
 | **Restore** | local bank → all M1 slots | Library |
@@ -141,7 +141,7 @@ Every local library change — Store, Clear, import, new/duplicate/delete bank, 
 
 ### The toolbar Write
 
-Writes the **editor** patch to the M1 slot chosen in the picker. With **mirror** ticked, the same program is also stored in that slot of the selected bank once the M1 confirms, so the bank keeps matching the synth. Untick it when the selected bank is a backup you want left as it was.
+Writes the **editor** patch to the M1 slot chosen in the picker, after a confirmation naming the patch and the slot (the same dialog whether you use the button, the M1 menu or ⇧⌘W — a Write cannot be undone, so nothing reaches the M1 from a single click). With **mirror** ticked, the same program is also stored in that slot of the selected bank once the M1 confirms, so the bank keeps matching the synth. Untick it when the selected bank is a backup you want left as it was.
 
 ## MIDI log
 
