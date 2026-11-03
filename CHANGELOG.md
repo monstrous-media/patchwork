@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- CLI: `restore`, `write`, `send --write` and `global --send` / `--load` now describe what they will
+  overwrite and ask for a `y` at the terminal, or take `--yes`; a non-interactive run without it exits 2
+  with "refusing to write to the M1 without --yes" and sends nothing. The Claude skill passes `--yes`
+  only after the user has agreed.
 - Restore to M1 first snapshots the slots about to change into a “Before restore <date>” bank (kept in
   the library and saved as .syx under Application Support/Patchwork/restore-backups); the write only
   starts when the snapshot completes, and the log names the backup. A “skip snapshot” option appears
