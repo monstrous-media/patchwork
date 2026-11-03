@@ -45,13 +45,24 @@ jobs:
       - name: Core tests (no Apple frameworks)
         run: swift test --filter PatchworkCoreTests 2>&1 | tail -20
 
-      # IH-02: fuzz the SysEx parser and the 7-in-8 unpacker with libFuzzer + ASan for two minutes,
-      # seeded from the test vectors. Any crash/timeout input lands in fuzz/artifacts and is uploaded.
+  # IH-02: fuzz the SysEx parser and the 7-in-8 unpacker with libFuzzer + ASan for two minutes, seeded
+  # from the test vectors. Runs on the bare runner rather than in the swift container because ASan needs
+  # vm.mmap_rnd_bits lowered on current GitHub hosts, which only sudo on the host can do. Any
+  # crash/timeout input lands in fuzz/artifacts and is uploaded.
+  fuzz:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: swift-actions/setup-swift@7ca6abe6b3b0e8b5421b88be48feee39cbf52c6a # v2.4.0
+        with:
+          swift-version: "5.10"
+      - name: Let AddressSanitizer map its shadow memory
+        run: sudo sysctl -w vm.mmap_rnd_bits=28
       - name: Build fuzz target (libFuzzer + ASan)
         run: swift build -c release -Xswiftc -sanitize=fuzzer,address -Xswiftc -parse-as-library -Xswiftc -DFUZZING --product FuzzSysEx
       - name: Fuzz SysEx parser for 120 s
         env:
-          ASAN_OPTIONS: detect_leaks=0     # LeakSanitizer needs ptrace, which the container lacks
+          ASAN_OPTIONS: detect_leaks=0
         run: |
           mkdir -p fuzz/corpus fuzz/artifacts
           cp Tests/PatchworkCoreTests/Vectors/* fuzz/corpus/
