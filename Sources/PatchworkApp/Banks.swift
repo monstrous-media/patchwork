@@ -66,6 +66,10 @@ struct TransferState {
     var writtenSlots: [Int] = []
     /// After the M1 acknowledges a write, also store the program in that slot of the selected local bank.
     var mirrorToSelectedBank: Bool = false
+    /// Run when the transfer completes (not when it fails or is cancelled): used to chain a Restore
+    /// behind the snapshot that protects it. A transfer with a continuation skips the generic
+    /// "Fetched N programs" line; the continuation reports instead.
+    var onFinish: (() -> Void)? = nil
 
     var progress: Double { total == 0 ? 0 : Double(done) / Double(total) }
 }
@@ -215,14 +219,55 @@ extension AppModel {
     }
 
     /// Write every filled slot of the bank to the M1 (Memory Protect must be off).
-    func restoreBankToM1(_ bank: Bank, verify: Bool) {
+    ///
+    /// A Restore overwrites stored programs and cannot be undone on the M1, so it is preceded by a
+    /// snapshot: the slots about to be replaced are read into a new bank "Before restore <date>" (kept
+    /// in the library, so it is in banks.json under Application Support) and also exported as .syx next
+    /// to the Global backups. The write starts only when the snapshot completes; if it fails or is
+    /// cancelled, nothing is written. `snapshot: false` is honoured only after a Fetch in this session
+    /// (`fetchedThisSession`), i.e. when a fresh copy of the M1's bank already exists in the library.
+    func restoreBankToM1(_ bank: Bank, verify: Bool, snapshot: Bool = true) {
         guard transfer == nil else { return }
         let items = bank.filledSlots.map { (slot: $0, program: bank.programs[$0]!) }
         guard !items.isEmpty else { append("Nothing to restore — bank is empty", error: true); return }
-        var t = TransferState(kind: .write, label: "Restoring “\(bank.name)” to M1", bankID: bank.id,
-                              slots: [], writes: items, total: items.count)
-        t.verifyAfter = verify
-        startTransfer(t)
+
+        if !snapshot && fetchedThisSession {
+            append("Restoring without a new snapshot — the bank fetched earlier this session is the backup")
+            var t = TransferState(kind: .write, label: "Restoring “\(bank.name)” to M1", bankID: bank.id,
+                                  slots: [], writes: items, total: items.count)
+            t.verifyAfter = verify
+            startTransfer(t)
+            return
+        }
+
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd HH:mm"
+        let snapshot = addBank(Bank.empty(name: "Before restore \(f.string(from: Date()))"), select: false)
+        let slots = items.map(\.slot)
+        var fetch = TransferState(kind: .fetch, label: "Snapshot of \(slots.count) M1 slots before restoring “\(bank.name)”",
+                                  bankID: snapshot.id, slots: slots, writes: [], total: slots.count)
+        fetch.onFinish = { [weak self] in
+            guard let self = self, let i = self.bankIndex(snapshot.id) else { return }
+            let saved = self.saveRestoreBackup(self.banks[i])
+            self.append("Backed up \(self.banks[i].filledCount) slots to bank “\(self.banks[i].name)”" + (saved.map { " and \($0.path)" } ?? "") + " — restore can be undone from there")
+            var t = TransferState(kind: .write, label: "Restoring “\(bank.name)” to M1", bankID: bank.id,
+                                  slots: [], writes: items, total: items.count)
+            t.verifyAfter = verify
+            self.startTransfer(t)
+        }
+        startTransfer(fetch)
+    }
+
+    /// Export a snapshot bank as .syx under Application Support/Patchwork/restore-backups (the same
+    /// place and naming as the Global-data backups). Returns the file written, or nil.
+    @discardableResult
+    func saveRestoreBackup(_ bank: Bank) -> URL? {
+        let dir = BankStore.url.deletingLastPathComponent().appendingPathComponent("restore-backups", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd-HHmmss"
+        let url = dir.appendingPathComponent("before-restore-\(f.string(from: Date())).syx")
+        var bytes: [UInt8] = []
+        for p in bank.programs.compactMap({ $0 }) { bytes += ActiveSynth.programDump(p, channel: midiChannel) }
+        return (try? Data(bytes).write(to: url)) != nil ? url : nil
     }
 
     /// Write one program to one M1 slot (used by library rows and the editor's Write button).
@@ -356,8 +401,13 @@ extension AppModel {
         guard let t = transfer else { return }
         transfer = nil
         transferGeneration += 1
+        if let next = t.onFinish {
+            next()
+            return
+        }
         switch t.kind {
         case .fetch:
+            if t.total == Bank.slotCount { fetchedThisSession = true }
             let names = Set(bankIndex(t.bankID).map { banks[$0].programs.compactMap { $0?.name } } ?? [])
             append("Fetched \(t.done) programs from the M1 — export the bank as .syx to keep a file backup")
             if names.count == 1 && t.done > 1 {
@@ -381,7 +431,7 @@ extension AppModel {
         guard let t = transfer else { return }
         transfer = nil
         transferGeneration += 1
-        append("\(t.label): stopped after \(t.done)/\(t.total) — \(why)", error: true)
+        append("\(t.label): stopped after \(t.done)/\(t.total) — \(why)" + (t.onFinish != nil ? "; nothing was written to the M1" : ""), error: true)
     }
 
     /// Run `block` after `delay` unless the transfer generation has moved on.

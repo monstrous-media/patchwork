@@ -119,7 +119,7 @@ Left: your banks. Right: the 100 slots of the selected bank.
 
 - **Fetch bank from M1** — reads all 100 slots into a *new* dated bank. Never overwrites an existing one.
 - **Verify against M1** — re-reads the filled slots and names any that differ.
-- **Restore to M1…** — writes every filled slot of this bank into the M1, one slot at a time, each acknowledged by the M1 before the next. Stops at the first refusal (Memory Protect). *verify after* re-reads them all. Asks for confirmation.
+- **Restore to M1…** — first reads the M1 slots about to change into a new bank named **Before restore <date>** (kept in the library, and saved as `.syx` under Application Support/Patchwork/restore-backups), then writes every filled slot of this bank into the M1, one slot at a time, each acknowledged by the M1 before the next. If the snapshot fails, nothing is written. After a *Fetch bank from M1* in the same session a **skip snapshot** tick appears, since that fetched bank already is the backup. Stops at the first refusal (Memory Protect). *verify after* re-reads them all. Asks for confirmation. To undo a restore, Restore the “Before restore” bank.
 - **Export .syx…** — the bank as a standard SysEx file (program dumps in slot order). Other librarians and Korg's own M1 software read it.
 - Bank list buttons: ＋ new empty bank · import `.syx` (files with more than 100 programs become several banks) · duplicate · − delete the local copy (the M1 is untouched).
 - Rename a bank in the name field.
