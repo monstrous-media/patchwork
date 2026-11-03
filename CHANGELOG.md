@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Releases carry a SLSA build-provenance attestation for the app zip and CLI tarball; verify a download
+  with `gh attestation verify Patchwork-x.y.z.zip --repo monstrous-media/patchwork`.
+
 ## 0.2.2
 
 - Page switches up to 10× faster: sliders no longer carry a tick mark per step (AppKit was recomputing
